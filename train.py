@@ -115,14 +115,14 @@ def main_worker(args):
     model.control_model.load_conv_in(pretrained_conv_in_params_control)
     model.control_model.prepare_training()
 
-    # finetuned vae load
-    if args.vae_load_path is not None:
-        state_dict = load_state_dict(args.vae_load_path, location="cpu")
-        new_state_dict = {}
-        for k, v in state_dict.items():
-            if "loss." not in k:
-                new_state_dict[k] = v.clone()
-        model.first_stage_model.load_state_dict(new_state_dict)
+    # # finetuned vae load
+    # if args.vae_load_path is not None:
+    #     state_dict = load_state_dict(args.vae_load_path, location="cpu")
+    #     new_state_dict = {}
+    #     for k, v in state_dict.items():
+    #         if "loss." not in k:
+    #             new_state_dict[k] = v.clone()
+    #     model.first_stage_model.load_state_dict(new_state_dict)
 
     model.learning_rate = args.learning_rate
     model.sd_locked = args.sd_locked

@@ -103,12 +103,12 @@ def main_worker(args):
     model = create_model(args.config_path, config=config).cpu()
     state_dict = load_state_dict(args.resume_path, location="cpu")
     pretrained_conv_in_params = {
-        "conv_in.weight": state_dict['model.diffusion_model.input_blocks.0.0.weight'],
-        "conv_in.bias": state_dict['model.diffusion_model.input_blocks.0.0.bias'],
+        "conv_in.weight": state_dict.pop('model.diffusion_model.input_blocks.0.0.weight'),
+        "conv_in.bias": state_dict.pop('model.diffusion_model.input_blocks.0.0.bias'),
     }
     pretrained_conv_in_params_control = {
-        "conv_in.weight": state_dict['control_model.input_blocks.0.0.weight'],
-        "conv_in.bias": state_dict['control_model.input_blocks.0.0.bias'],
+        "conv_in.weight": state_dict.pop('control_model.input_blocks.0.0.weight'),
+        "conv_in.bias": state_dict.pop('control_model.input_blocks.0.0.bias'),
     }
     model.load_state_dict(state_dict, strict=False)
     model.diffusion_model.load_conv_in(pretrained_conv_in_params)

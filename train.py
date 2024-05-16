@@ -111,7 +111,7 @@ def main_worker(args):
         "conv_in.bias": state_dict.pop('control_model.input_blocks.0.0.bias'),
     }
     model.load_state_dict(state_dict, strict=False)
-    model.diffusion_model.load_conv_in(pretrained_conv_in_params)
+    model.model.diffusion_model.load_conv_in(pretrained_conv_in_params)
     model.control_model.load_conv_in(pretrained_conv_in_params_control)
     model.control_model.prepare_training()
 

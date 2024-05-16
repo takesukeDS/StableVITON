@@ -292,7 +292,7 @@ class StableVITON(UNetModel):
         conv_in_weight = torch.cat([conv_in_weight, torch.zeros(
             conv_in_weight.shape[0], self.in_channels - conv_in_weight.shape[1], *conv_in_weight.shape[2:],
             device=conv_in_weight.device, dtype=conv_in_weight.dtype)], dim=1)
-        self.self.input_blocks[0][0].weight.copy_(conv_in_weight)
+        self.input_blocks[0][0].weight.copy_(conv_in_weight)
 
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
         hs = []
@@ -581,7 +581,7 @@ class NoZeroConvControlNet(nn.Module):
         conv_in_weight = torch.cat([conv_in_weight, torch.zeros(
             conv_in_weight.shape[0], self.in_channels - conv_in_weight.shape[1], *conv_in_weight.shape[2:],
             device=conv_in_weight.device, dtype=conv_in_weight.dtype)], dim=1)
-        self.self.input_blocks[0][0].weight.copy_(conv_in_weight)
+        self.input_blocks[0][0].weight.copy_(conv_in_weight)
 
     def forward(self, x, hint, timesteps, context, only_mid_control=False, **kwargs):
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)

@@ -1,6 +1,6 @@
 import os
 from os.path import join as opj
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 import omegaconf
 from glob import glob
 
@@ -282,19 +282,31 @@ class StableVITON(UNetModel):
         self.use_atv_loss = use_atv_loss
     def make_zero_conv(self, channels):
         return zero_module(conv_nd(2, channels, channels, 1, padding=0))
+
+    @torch.no_grad()
+    def load_conv_in(self, state_dict: Dict[str, torch.Tensor]):
+        conv_in_weight = state_dict["conv_in.weight"]
+        conv_in_bias = state_dict.get("conv_in.bias")
+        if conv_in_bias is None:
+            self.input_blocks[0][0].bias.copy_(conv_in_bias)
+        conv_in_weight = torch.cat([conv_in_weight, torch.zeros(
+            conv_in_weight.shape[0], self.in_channels - conv_in_weight.shape[1], *conv_in_weight.shape[2:],
+            device=conv_in_weight.device, dtype=conv_in_weight.dtype)], dim=1)
+        self.self.input_blocks[0][0].weight.copy_(conv_in_weight)
+
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
         hs = []
         mask1 = kwargs.get("mask1", None)
         mask2 = kwargs.get("mask2", None)
         loss = 0
-        with torch.no_grad():
-            t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
-            emb = self.time_embed(t_emb)
-            h = x.type(self.dtype)
-            for module in self.input_blocks:
-                h = module(h, emb, context)
-                hs.append(h)
-            h = self.middle_block(h, emb, context)
+
+        t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
+        emb = self.time_embed(t_emb)
+        h = x.type(self.dtype)
+        for module in self.input_blocks:
+            h = module(h, emb, context)
+            hs.append(h)
+        h = self.middle_block(h, emb, context)
 
         if control is not None:                 
             hint = control.pop()
@@ -555,6 +567,22 @@ class NoZeroConvControlNet(nn.Module):
         )
         self._feature_size += ch
 
+    # training only conv_input for hybvton
+    def prepare_training(self):
+        self.requires_grad_(False)
+        self.input_blocks[0].requires_grad_(True)
+
+    @torch.no_grad()
+    def load_conv_in(self, state_dict: Dict[str, torch.Tensor]):
+        conv_in_weight = state_dict["conv_in.weight"]
+        conv_in_bias = state_dict.get("conv_in.bias")
+        if conv_in_bias is None:
+            self.input_blocks[0][0].bias.copy_(conv_in_bias)
+        conv_in_weight = torch.cat([conv_in_weight, torch.zeros(
+            conv_in_weight.shape[0], self.in_channels - conv_in_weight.shape[1], *conv_in_weight.shape[2:],
+            device=conv_in_weight.device, dtype=conv_in_weight.dtype)], dim=1)
+        self.self.input_blocks[0][0].weight.copy_(conv_in_weight)
+
     def forward(self, x, hint, timesteps, context, only_mid_control=False, **kwargs):
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
         emb = self.time_embed(t_emb)
@@ -573,7 +601,7 @@ class NoZeroConvControlNet(nn.Module):
                 h += guided_hint
                 hs.append(h)
                 guided_hint = None
-            else:                                                
+            else:
                 h = module(h, emb, context)
                 hs.append(h)
             outs.append(h)

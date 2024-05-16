@@ -64,10 +64,10 @@ class VITONHDDataset(Dataset):
             self, 
             data_root_dir, 
             img_H, 
-            img_W, 
+            img_W,
+            phase,
             is_paired=True, 
-            is_test=False, 
-            is_sorted=False, 
+            is_sorted=False,
             transform_size=None, 
             transform_color=None,
             **kwargs
@@ -76,8 +76,9 @@ class VITONHDDataset(Dataset):
         self.img_H = img_H
         self.img_W = img_W
         self.pair_key = "paired" if is_paired else "unpaired"
-        self.data_type = "train" if not is_test else "test"
-        self.is_test = is_test
+        self.data_type = "train" if phase in ["train", "val"] else "test"
+        self.is_test = phase in ["val", "test"]
+        self.phase = phase
         self.resize_ratio_H = 1.0
         self.resize_ratio_W = 1.0
 
@@ -108,7 +109,7 @@ class VITONHDDataset(Dataset):
                                     "cloth_warped":"image", 
                                     "image_densepose":"image", 
                                     "image_parse":"image", 
-                                    "gt_cloth_warped_mask":"image", 
+                                    "gt_cloth_warped_mask":"image",
                                     }
         )
         self.transform_crop_cloth = A.Compose(
@@ -127,6 +128,8 @@ class VITONHDDataset(Dataset):
                                     "image_densepose":"image", 
                                     "image_parse":"image", 
                                     "gt_cloth_warped_mask":"image",
+                                    "hybvton_warped_cloth": "image",
+                                    "hybvton_warped_mask": "image",
                                     }
             )
         #### spatial aug <<<<
@@ -149,11 +152,11 @@ class VITONHDDataset(Dataset):
             )
         #### non-spatial aug <<<<
                     
-        assert not (self.data_type == "train" and self.pair_key == "unpaired"), f"train must use paired dataset"
+        assert not (self.phase == "train" and self.pair_key == "unpaired"), f"train must use paired dataset"
         
         im_names = []
         c_names = []
-        with open(opj(self.drd, f"{self.data_type}_pairs.txt"), "r") as f:
+        with open(opj(self.drd, f"hybvton_{self.phase}_pairs.txt"), "r") as f:
             for line in f.readlines():
                 im_name, c_name = line.strip().split()
                 im_names.append(im_name)
@@ -173,6 +176,7 @@ class VITONHDDataset(Dataset):
         img_fn = self.im_names[idx]
         cloth_fn = self.c_names[self.pair_key][idx]
         if self.transform_size is None and self.transform_color is None:
+            assert False, "Should be never used. since it does not seem supported by original codes"
             agn = imread(
                 opj(self.drd, self.data_type, "agnostic-v3.2", self.im_names[idx]), 
                 self.img_H, 
@@ -183,21 +187,13 @@ class VITONHDDataset(Dataset):
                 self.img_H, 
                 self.img_W, 
                 is_mask=True, 
-                in_inverse_mask=True
             )
             cloth = imread(
                 opj(self.drd, self.data_type, "cloth", self.c_names[self.pair_key][idx]), 
                 self.img_H, 
                 self.img_W
             )
-            cloth_mask = imread(
-                opj(self.drd, self.data_type, "cloth-mask", self.c_names[self.pair_key][idx]), 
-                self.img_H, 
-                self.img_W, 
-                is_mask=True, 
-                cloth_mask_check=True
-            )
-            
+
             gt_cloth_warped_mask = imread(
                 opj(self.drd, self.data_type, "gt_cloth_warped_mask", self.im_names[idx]), 
                 self.img_H, 
@@ -205,8 +201,29 @@ class VITONHDDataset(Dataset):
                 is_mask=True
             ) if not self.is_test else np.zeros_like(agn_mask)
 
+            hybvton_warped_cloth = imread(
+                opj(self.drd, self.data_type, "hybvton_warped_cloth_" + self.pair_key,
+                    self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
+                self.img_H,
+                self.img_W,
+                is_mask=True,
+                cloth_mask_check=True
+            )
+            hybvton_warped_mask = imread(
+                opj(self.drd, self.data_type, "hybvton_warped_mask_" + self.pair_key,
+                    self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
+                self.img_H,
+                self.img_W,
+                is_mask=True
+            )
+
             image = imread(opj(self.drd, self.data_type, "image", self.im_names[idx]), self.img_H, self.img_W)
             image_densepose = imread(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]), self.img_H, self.img_W)
+            hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
+            agn = agn * (1 - hybvton_warped_mask[:,:,None]) + hybvton_warped_cloth * hybvton_warped_mask[:,:,None]
+            hybvton_warped_mask = hybvton_warped_mask * 255
+            agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
+            agn_mask = 255 - agn_mask
 
         else:
             agn = imread_for_albu(opj(self.drd, self.data_type, "agnostic-v3.2", self.im_names[idx]))
@@ -218,6 +235,21 @@ class VITONHDDataset(Dataset):
                 opj(self.drd, self.data_type, "gt_cloth_warped_mask", self.im_names[idx]),
                 is_mask=True
             ) if not self.is_test else np.zeros_like(agn_mask)
+            hybvton_warped_cloth = imread(
+                opj(self.drd, self.data_type, "hybvton_warped_cloth_" + self.pair_key,
+                    self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
+                self.img_H,
+                self.img_W,
+                is_mask=True,
+                cloth_mask_check=True
+            )
+            hybvton_warped_mask = imread(
+                opj(self.drd, self.data_type, "hybvton_warped_mask_" + self.pair_key,
+                    self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
+                self.img_H,
+                self.img_W,
+                is_mask=True
+            )
                 
             image = imread_for_albu(opj(self.drd, self.data_type, "image", self.im_names[idx]))
             image_densepose = imread_for_albu(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]))
@@ -231,16 +263,25 @@ class VITONHDDataset(Dataset):
                     cloth_mask=cloth_mask, 
                     image_densepose=image_densepose,
                     gt_cloth_warped_mask=gt_cloth_warped_mask,
+                    hybvton_warped_cloth=hybvton_warped_cloth,
+                    hybvton_warped_mask=hybvton_warped_mask,
                 )
                 image=transformed["image"]
                 agn=transformed["agn"]
                 agn_mask=transformed["agn_mask"]
                 image_densepose=transformed["image_densepose"]
                 gt_cloth_warped_mask=transformed["gt_cloth_warped_mask"]
+                hybvton_warped_cloth=transformed["hybvton_warped_cloth"]
+                hybvton_warped_mask=transformed["hybvton_warped_mask"]
 
                 cloth=transformed["cloth"]
                 cloth_mask=transformed["cloth_mask"]
-                
+
+            hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
+            agn = agn * (1 - hybvton_warped_mask[:, :, None]) + hybvton_warped_cloth * hybvton_warped_mask[:, :, None]
+            hybvton_warped_mask = hybvton_warped_mask * 255
+            agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
+
             if self.transform_crop_person is not None:
                 transformed_image = self.transform_crop_person(
                     image=image,
@@ -254,7 +295,7 @@ class VITONHDDataset(Dataset):
                 agn=transformed_image["agn"]
                 agn_mask=transformed_image["agn_mask"]
                 image_densepose=transformed_image["image_densepose"]
-                gt_cloth_warped_mask=transformed["gt_cloth_warped_mask"]
+                gt_cloth_warped_mask=transformed_image["gt_cloth_warped_mask"]
 
             if self.transform_crop_cloth is not None:
                 transformed_cloth = self.transform_crop_cloth(
@@ -286,6 +327,8 @@ class VITONHDDataset(Dataset):
             image = norm_for_albu(image)
             image_densepose = norm_for_albu(image_densepose)
             gt_cloth_warped_mask = norm_for_albu(gt_cloth_warped_mask, is_mask=True)
+            hybvton_warped_cloth = norm_for_albu(hybvton_warped_cloth)
+            hybvton_warped_mask = norm_for_albu(hybvton_warped_mask, is_mask=True)
             
         return dict(
             agn=agn,
@@ -298,4 +341,6 @@ class VITONHDDataset(Dataset):
             txt="",
             img_fn=img_fn,
             cloth_fn=cloth_fn,
+            hybvton_warped_cloth=hybvton_warped_cloth,
+            hybvton_warped_mask=hybvton_warped_mask,
         )

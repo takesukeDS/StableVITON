@@ -31,7 +31,7 @@ def build_args():
     parser.add_argument("--save_name", type=str, default="dummy")
 
     parser.add_argument("--use_validation", action="store_false")
-    parser.add_argument("--resume_path", type=str, default=None)
+    parser.add_argument("--resume_path", type=str)
     parser.add_argument("--accum_iter", type=int, default=1)
     parser.add_argument("--img_H", type=int, default=512)
     parser.add_argument("--img_W", type=int, default=384)
@@ -101,17 +101,20 @@ def main_worker(args):
     config = build_config(args)
     OmegaConf.save(config, args.config_save_path)
     model = create_model(args.config_path, config=config).cpu()
-    if args.resume_path is not None:
-        if not args.no_strict_load:
-            model.load_state_dict(load_state_dict(args.resume_path, location="cpu"))
-        else:
-            model.load_state_dict(load_state_dict(args.resume_path, location="cpu"), strict=False)
-    elif config.resume_path is not None:
-        if not args.no_strict_load:
-            model.load_state_dict(load_state_dict(config.resume_path, location="cpu"))
-        else:
-            model.load_state_dict(load_state_dict(config.resume_path, location="cpu"), strict=False)
-        
+    state_dict = load_state_dict(args.resume_path, location="cpu")
+    pretrained_conv_in_params = {
+        "conv_in.weight": state_dict['model.diffusion_model.input_blocks.0.0.weight'],
+        "conv_in.bias": state_dict['model.diffusion_model.input_blocks.0.0.bias'],
+    }
+    pretrained_conv_in_params_control = {
+        "conv_in.weight": state_dict['model.control_model.input_blocks.0.0.weight'],
+        "conv_in.bias": state_dict['model.control_model.input_blocks.0.0.bias'],
+    }
+    model.load_state_dict(state_dict, strict=False)
+    model.diffusion_model.load_conv_in(pretrained_conv_in_params)
+    model.control_model.load_conv_in(pretrained_conv_in_params_control)
+    model.control_model.prepare_training()
+
     # finetuned vae load
     if args.vae_load_path is not None:
         state_dict = load_state_dict(args.vae_load_path, location="cpu")
@@ -128,24 +131,25 @@ def main_worker(args):
     train_dataset = getattr(import_module("dataset"), config.dataset_name)(
         data_root_dir=args.data_root_dir, 
         img_H=args.img_H, 
-        img_W=args.img_W, 
+        img_W=args.img_W,
+        phase="train",
         transform_size=args.transform_size, 
         transform_color=args.transform_color, 
     )
     valid_paired_dataset = getattr(import_module("dataset"), config.dataset_name)(
         data_root_dir=args.data_root_dir, 
         img_H=args.img_H, 
-        img_W=args.img_W, 
-        is_test=True, 
-        is_paired=True, 
+        img_W=args.img_W,
+        phase="val",
+        is_paired=True,
         is_sorted=True, 
     )
     valid_unpaired_dataset = getattr(import_module("dataset"), config.dataset_name)(
         data_root_dir=args.data_root_dir, 
         img_H=args.img_H, 
-        img_W=args.img_W, 
-        is_test=True, 
-        is_paired=False, 
+        img_W=args.img_W,
+        phase="val",
+        is_paired=False,
         is_sorted=True, 
     )
       

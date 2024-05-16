@@ -237,14 +237,10 @@ class VITONHDDataset(Dataset):
             hybvton_warped_cloth = imread_for_albu(
                 opj(self.drd, self.data_type, "hybvton_warped_cloth_" + self.pair_key,
                     self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
-                self.img_H,
-                self.img_W,
             )
             hybvton_warped_mask = imread_for_albu(
                 opj(self.drd, self.data_type, "hybvton_warped_mask_" + self.pair_key,
                     self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
-                self.img_H,
-                self.img_W,
                 is_mask=True
             )
                 

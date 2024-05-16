@@ -128,8 +128,6 @@ class VITONHDDataset(Dataset):
                                     "image_densepose":"image", 
                                     "image_parse":"image", 
                                     "gt_cloth_warped_mask":"image",
-                                    "hybvton_warped_cloth": "image",
-                                    "hybvton_warped_mask": "image",
                                     }
             )
         #### spatial aug <<<<
@@ -256,16 +254,12 @@ class VITONHDDataset(Dataset):
                     cloth_mask=cloth_mask, 
                     image_densepose=image_densepose,
                     gt_cloth_warped_mask=gt_cloth_warped_mask,
-                    hybvton_warped_cloth=hybvton_warped_cloth,
-                    hybvton_warped_mask=hybvton_warped_mask,
                 )
                 image=transformed["image"]
                 agn=transformed["agn"]
                 agn_mask=transformed["agn_mask"]
                 image_densepose=transformed["image_densepose"]
                 gt_cloth_warped_mask=transformed["gt_cloth_warped_mask"]
-                hybvton_warped_cloth=transformed["hybvton_warped_cloth"]
-                hybvton_warped_mask=transformed["hybvton_warped_mask"]
 
                 cloth=transformed["cloth"]
                 cloth_mask=transformed["cloth_mask"]

@@ -20,10 +20,10 @@ def main():
         transform_color=args.transform_color,
     )
     data = train_dataset[0]
-    agn_pil = Image.fromarray(denormalize_image(data["agn"]).mul(255).byte().cpu().numpy())
-    agn_mask_pil = Image.fromarray(data["agn_mask"].bool().squeeze(-1).cpu().numpy())
-    hybvton_warped_cloth_pil = Image.fromarray(denormalize_image(data["hybvton_warped_cloth"]).mul(255).byte().cpu().numpy())
-    hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].bool().squeeze(-1).cpu().numpy())
+    agn_pil = Image.fromarray((denormalize_image(data["agn"]) * 255).astype('uint8'))
+    agn_mask_pil = Image.fromarray(data["agn_mask"].squeeze(-1).astype(bool))
+    hybvton_warped_cloth_pil = Image.fromarray((denormalize_image(data["hybvton_warped_cloth"]) * 255).astype('uint8'))
+    hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].squeeze(-1).astype(bool))
 
     person_id = os.path.splitext(data["image_fn"])[0]
     cloth_id = os.path.splitext(data["cloth_fn"])[0]
@@ -43,11 +43,11 @@ def main():
         is_sorted=True,
     )
     data = valid_paired_dataset[0]
-    agn_pil = Image.fromarray(denormalize_image(data["agn"]).mul(255).byte().cpu().numpy())
-    agn_mask_pil = Image.fromarray(data["agn_mask"].bool().squeeze(-1).cpu().numpy())
+    agn_pil = Image.fromarray((denormalize_image(data["agn"]) * 255).astype('uint8'))
+    agn_mask_pil = Image.fromarray(data["agn_mask"].squeeze(-1).astype(bool))
     hybvton_warped_cloth_pil = Image.fromarray(
-        denormalize_image(data["hybvton_warped_cloth"]).mul(255).byte().cpu().numpy())
-    hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].bool().squeeze(-1).cpu().numpy())
+        (denormalize_image(data["hybvton_warped_cloth"]) * 255).astype('uint8'))
+    hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].squeeze(-1).astype(bool))
 
     person_id = os.path.splitext(data["image_fn"])[0]
     cloth_id = os.path.splitext(data["cloth_fn"])[0]
@@ -67,11 +67,11 @@ def main():
         is_sorted=True,
     )
     data = valid_unpaired_dataset[0]
-    agn_pil = Image.fromarray(denormalize_image(data["agn"]).mul(255).byte().cpu().numpy())
-    agn_mask_pil = Image.fromarray(data["agn_mask"].bool().squeeze(-1).cpu().numpy())
+    agn_pil = Image.fromarray((denormalize_image(data["agn"]) * 255).astype('uint8'))
+    agn_mask_pil = Image.fromarray(data["agn_mask"].squeeze(-1).astype(bool))
     hybvton_warped_cloth_pil = Image.fromarray(
-        denormalize_image(data["hybvton_warped_cloth"]).mul(255).byte().cpu().numpy())
-    hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].bool().squeeze(-1).cpu().numpy())
+        (denormalize_image(data["hybvton_warped_cloth"]) * 255).astype('uint8'))
+    hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].squeeze(-1).astype(bool))
 
     person_id = os.path.splitext(data["image_fn"])[0]
     cloth_id = os.path.splitext(data["cloth_fn"])[0]

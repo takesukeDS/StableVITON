@@ -220,7 +220,8 @@ class VITONHDDataset(Dataset):
             image_densepose = imread(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]), self.img_H, self.img_W)
             hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
             agn = agn * (1 - hybvton_warped_mask[:,:,None]) + hybvton_warped_cloth * hybvton_warped_mask[:,:,None]
-            hybvton_warped_mask = hybvton_warped_mask * 255
+            agn = agn.astype(np.uint8)
+            hybvton_warped_mask = (hybvton_warped_mask * 255).astype(np.uint8)
             agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
             agn_mask = 255 - agn_mask
 
@@ -268,7 +269,8 @@ class VITONHDDataset(Dataset):
 
             hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
             agn = agn * (1 - hybvton_warped_mask[:, :, None]) + hybvton_warped_cloth * hybvton_warped_mask[:, :, None]
-            hybvton_warped_mask = hybvton_warped_mask * 255
+            agn = agn.astype(np.uint8)
+            hybvton_warped_mask = (hybvton_warped_mask * 255).astype(np.uint8)
             agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
 
             if self.transform_crop_person is not None:

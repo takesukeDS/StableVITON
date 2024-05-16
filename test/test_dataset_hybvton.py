@@ -4,7 +4,7 @@ from PIL import Image
 import os
 
 def denormalize_image(image):
-    return (image * 0.5 + 0.5).clamp(0, 1)
+    return (image * 0.5 + 0.5).clip(0, 1)
 
 def main():
     args = build_args()

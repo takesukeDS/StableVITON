@@ -107,8 +107,8 @@ def main_worker(args):
         "conv_in.bias": state_dict['model.diffusion_model.input_blocks.0.0.bias'],
     }
     pretrained_conv_in_params_control = {
-        "conv_in.weight": state_dict['model.control_model.input_blocks.0.0.weight'],
-        "conv_in.bias": state_dict['model.control_model.input_blocks.0.0.bias'],
+        "conv_in.weight": state_dict['control_model.input_blocks.0.0.weight'],
+        "conv_in.bias": state_dict['control_model.input_blocks.0.0.bias'],
     }
     model.load_state_dict(state_dict, strict=False)
     model.diffusion_model.load_conv_in(pretrained_conv_in_params)

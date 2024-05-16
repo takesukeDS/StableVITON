@@ -25,7 +25,7 @@ def main():
     hybvton_warped_cloth_pil = Image.fromarray((denormalize_image(data["hybvton_warped_cloth"]) * 255).astype('uint8'))
     hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].squeeze(-1).astype(bool))
 
-    person_id = os.path.splitext(data["image_fn"])[0]
+    person_id = os.path.splitext(data["img_fn"])[0]
     cloth_id = os.path.splitext(data["cloth_fn"])[0]
 
     agn_pil.save(f"generated/{person_id}_{cloth_id}_agn.png")
@@ -49,7 +49,7 @@ def main():
         (denormalize_image(data["hybvton_warped_cloth"]) * 255).astype('uint8'))
     hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].squeeze(-1).astype(bool))
 
-    person_id = os.path.splitext(data["image_fn"])[0]
+    person_id = os.path.splitext(data["img_fn"])[0]
     cloth_id = os.path.splitext(data["cloth_fn"])[0]
 
     agn_pil.save(f"generated/{person_id}_{cloth_id}_agn_val_paired.png")
@@ -73,7 +73,7 @@ def main():
         (denormalize_image(data["hybvton_warped_cloth"]) * 255).astype('uint8'))
     hybvton_warped_mask_pil = Image.fromarray(data["hybvton_warped_mask"].squeeze(-1).astype(bool))
 
-    person_id = os.path.splitext(data["image_fn"])[0]
+    person_id = os.path.splitext(data["img_fn"])[0]
     cloth_id = os.path.splitext(data["cloth_fn"])[0]
 
     agn_pil.save(f"generated/{person_id}_{cloth_id}_agn_val_unpaired.png")

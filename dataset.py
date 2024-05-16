@@ -110,6 +110,8 @@ class VITONHDDataset(Dataset):
                                     "image_densepose":"image", 
                                     "image_parse":"image", 
                                     "gt_cloth_warped_mask":"image",
+                                    "hybvton_warped_cloth": "image",
+                                    "hybvton_warped_mask": "image",
                                     }
         )
         self.transform_crop_cloth = A.Compose(
@@ -276,6 +278,8 @@ class VITONHDDataset(Dataset):
                     agn_mask=agn_mask,
                     image_densepose=image_densepose,
                     gt_cloth_warped_mask=gt_cloth_warped_mask,
+                    hybvton_warped_cloth=hybvton_warped_cloth,
+                    hybvton_warped_mask=hybvton_warped_mask,
                 )
 
                 image=transformed_image["image"]
@@ -283,6 +287,8 @@ class VITONHDDataset(Dataset):
                 agn_mask=transformed_image["agn_mask"]
                 image_densepose=transformed_image["image_densepose"]
                 gt_cloth_warped_mask=transformed_image["gt_cloth_warped_mask"]
+                hybvton_warped_cloth=transformed_image["hybvton_warped_cloth"]
+                hybvton_warped_mask=transformed_image["hybvton_warped_mask"]
 
             if self.transform_crop_cloth is not None:
                 transformed_cloth = self.transform_crop_cloth(

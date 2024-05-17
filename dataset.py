@@ -92,10 +92,11 @@ class VITONHDDataset(Dataset):
         transform_crop_person_lst = []
         transform_crop_cloth_lst = []
         transform_size_lst = [A.Resize(int(img_H*self.resize_ratio_H), int(img_W*self.resize_ratio_W))]
+        transform_hflip_lst = []
     
         if transform_size is not None:
             if "hflip" in transform_size:
-                transform_size_lst.append(A.HorizontalFlip(p=0.5))
+                transform_hflip_lst.append(A.HorizontalFlip(p=0.5))
 
             if "shiftscale" in transform_size:
                 transform_crop_person_lst.append(A.ShiftScaleRotate(rotate_limit=0, shift_limit=0.2, scale_limit=(-0.2, 0.2), border_mode=cv2.BORDER_CONSTANT, p=0.5, value=0))
@@ -130,6 +131,21 @@ class VITONHDDataset(Dataset):
                                     "image_densepose":"image", 
                                     "image_parse":"image", 
                                     "gt_cloth_warped_mask":"image",
+                                    }
+            )
+        self.transform_hflip = A.Compose(
+                transform_hflip_lst,
+                additional_targets={"agn":"image",
+                                    "agn_mask":"image",
+                                    "cloth":"image",
+                                    "cloth_mask":"image",
+                                    "cloth_mask_warped":"image",
+                                    "cloth_warped":"image",
+                                    "image_densepose":"image",
+                                    "image_parse":"image",
+                                    "gt_cloth_warped_mask":"image",
+                                    "hybvton_warped_cloth": "image",
+                                    "hybvton_warped_mask": "image",
                                     }
             )
         #### spatial aug <<<<
@@ -272,6 +288,30 @@ class VITONHDDataset(Dataset):
             agn = agn.astype(np.uint8)
             hybvton_warped_mask = (hybvton_warped_mask * 255).astype(np.uint8)
             agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
+
+            if self.transform_hflip is not None:
+                transformed = self.transform_hflip(
+                    image=image,
+                    agn=agn,
+                    agn_mask=agn_mask,
+                    cloth=cloth,
+                    cloth_mask=cloth_mask,
+                    image_densepose=image_densepose,
+                    gt_cloth_warped_mask=gt_cloth_warped_mask,
+                    hybvton_warped_cloth=hybvton_warped_cloth,
+                    hybvton_warped_mask=hybvton_warped_mask,
+                )
+
+                image=transformed["image"]
+                agn=transformed["agn"]
+                agn_mask=transformed["agn_mask"]
+                image_densepose=transformed["image_densepose"]
+                gt_cloth_warped_mask=transformed["gt_cloth_warped_mask"]
+                hybvton_warped_cloth=transformed["hybvton_warped_cloth"]
+                hybvton_warped_mask=transformed["hybvton_warped_mask"]
+
+                cloth=transformed["cloth"]
+                cloth_mask=transformed["cloth_mask"]
 
             if self.transform_crop_person is not None:
                 transformed_image = self.transform_crop_person(

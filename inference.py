@@ -27,6 +27,10 @@ def build_args():
     parser.add_argument("--img_H", type=int, default=512)
     parser.add_argument("--img_W", type=int, default=384)
     parser.add_argument("--eta", type=float, default=0.0)
+
+    # Hybvton
+    parser.add_argument("--phase", type=str)
+
     args = parser.parse_args()
     return args
 
@@ -54,8 +58,8 @@ def main(args):
         data_root_dir=args.data_root_dir,
         img_H=img_H,
         img_W=img_W,
+        phase=args.phase,
         is_paired=not args.unpair,
-        is_test=True,
         is_sorted=True
     )
     dataloader = DataLoader(dataset, num_workers=4, shuffle=False, batch_size=batch_size, pin_memory=True)

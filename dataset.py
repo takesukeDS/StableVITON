@@ -192,7 +192,6 @@ class VITONHDDataset(Dataset):
         img_fn = self.im_names[idx]
         cloth_fn = self.c_names[self.pair_key][idx]
         if self.transform_size is None and self.transform_color is None:
-            assert False, "Should be never used. since it does not seem supported by original codes"
             agn = imread(
                 opj(self.drd, self.data_type, "agnostic-v3.2", self.im_names[idx]), 
                 self.img_H, 
@@ -222,7 +221,6 @@ class VITONHDDataset(Dataset):
                     self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
                 self.img_H,
                 self.img_W,
-                is_mask=True,
             )
             hybvton_warped_mask = imread(
                 opj(self.drd, self.data_type, "hybvton_warped_mask_" + self.pair_key,

@@ -62,7 +62,7 @@ def main(args):
         return (x + 1) / 2
 
     def to_rgb(x):
-        return (x * 255).astype(np.uint8)
+        return (x * 255).to(torch.uint8)
 
     for batch_idx, batch in enumerate(dataloader):
         for i in range(batch_size):

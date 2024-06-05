@@ -191,8 +191,8 @@ class VITONHDDataset(Dataset):
     def __getitem__(self, idx):
         img_fn = self.im_names[idx]
         cloth_fn = self.c_names[self.pair_key][idx]
-        agn_mask_orig = None
         if self.transform_size is None and self.transform_color is None:
+            raise NotImplementedError("Never reached by original code")
             agn = imread(
                 opj(self.drd, self.data_type, "agnostic-v3.2", self.im_names[idx]), 
                 self.img_H, 
@@ -284,6 +284,7 @@ class VITONHDDataset(Dataset):
                 cloth_mask=transformed["cloth_mask"]
 
             hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
+            agn_mask_orig = 255 - agn_mask
             agn = agn * (1 - hybvton_warped_mask[:, :, None]) + hybvton_warped_cloth * hybvton_warped_mask[:, :, None]
             agn = agn.astype(np.uint8)
             hybvton_warped_mask = (hybvton_warped_mask * 255).astype(np.uint8)
@@ -356,6 +357,7 @@ class VITONHDDataset(Dataset):
                 agn = agn * agn_mask[:,:,None].astype(np.float32)/255.0 + 128 * (1 - agn_mask[:,:,None].astype(np.float32)/255.0)
                 
             agn = norm_for_albu(agn)
+            agn_mask_orig = norm_for_albu(agn_mask_orig, is_mask=True)
             agn_mask = norm_for_albu(agn_mask, is_mask=True)
             cloth = norm_for_albu(cloth)
             cloth_mask = norm_for_albu(cloth_mask, is_mask=True)

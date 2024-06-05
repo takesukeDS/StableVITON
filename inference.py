@@ -102,7 +102,7 @@ def main(args):
             x_sample_img = tensor2img(x_sample)  # [0, 255]
             if args.repaint:
                 repaint_agn_img = np.uint8((batch["image"][sample_idx].cpu().numpy()+1)/2 * 255)   # [0,255]
-                repaint_agn_mask_img = batch["agn_mask"][sample_idx].cpu().numpy()  # 0 or 1
+                repaint_agn_mask_img = batch["agn_mask_orig"][sample_idx].cpu().numpy()  # 0 or 1
                 x_sample_img = repaint_agn_img * repaint_agn_mask_img + x_sample_img * (1-repaint_agn_mask_img)
                 x_sample_img = np.uint8(x_sample_img)
 

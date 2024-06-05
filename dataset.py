@@ -191,6 +191,7 @@ class VITONHDDataset(Dataset):
     def __getitem__(self, idx):
         img_fn = self.im_names[idx]
         cloth_fn = self.c_names[self.pair_key][idx]
+        agn_mask_orig = None
         if self.transform_size is None and self.transform_color is None:
             agn = imread(
                 opj(self.drd, self.data_type, "agnostic-v3.2", self.im_names[idx]), 
@@ -236,6 +237,7 @@ class VITONHDDataset(Dataset):
             agn = agn * (1 - hybvton_warped_mask[:,:,None]) + hybvton_warped_cloth * hybvton_warped_mask[:,:,None]
             agn = agn.astype(np.uint8)
             hybvton_warped_mask = (hybvton_warped_mask * 255).astype(np.uint8)
+            agn_mask_orig = 255 - agn_mask
             agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
             agn_mask = 255 - agn_mask
 
@@ -376,4 +378,5 @@ class VITONHDDataset(Dataset):
             cloth_fn=cloth_fn,
             hybvton_warped_cloth=hybvton_warped_cloth,
             hybvton_warped_mask=hybvton_warped_mask,
+            agn_mask_orig=agn_mask_orig,
         )

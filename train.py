@@ -30,6 +30,9 @@ def build_args():
     parser.add_argument("--save_root_dir", type=str, default="./logs")
     parser.add_argument("--save_name", type=str, default="dummy")
 
+    # hybvton arguments
+    parser.add_argument("--scale_attn_by_mask3", action="store_true")
+
     parser.add_argument("--use_validation", action="store_false")
     parser.add_argument("--resume_path", type=str)
     parser.add_argument("--accum_iter", type=int, default=1)
@@ -90,9 +93,10 @@ def build_config(args, config_path=None):
     config.model.params.validation_config.scale = config.model.params.validation_config.get("scale", 1.0)
     if args is not None:
         config.model.params.unet_config.params.use_atv_loss = args.use_atv_loss
+        config.model.params.unet_config.params.scale_attn_by_mask3 = args.scale_attn_by_mask3
         config.model.params.validation_config.img_save_dir = args.valid_img_save_dir
         config.model.params.validation_config.real_dir = args.valid_real_dir
-        
+
         if args.use_atv_loss:
             config.model.params.use_attn_mask = True
     return config

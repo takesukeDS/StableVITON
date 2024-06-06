@@ -38,6 +38,8 @@ class ControlLDM(LatentDiffusion):
             always_learnable_param=False,
             mask1_key="",
             mask2_key="",
+            mask3_key="",
+            scale_attn_by_mask3=False,
             *args, 
             **kwargs
         ):
@@ -52,6 +54,8 @@ class ControlLDM(LatentDiffusion):
         self.use_attn_mask = use_attn_mask
         self.mask1_key = mask1_key
         self.mask2_key = mask2_key
+        self.mask3_key = mask3_key
+        self.scale_attn_by_mask3 = scale_attn_by_mask3
         self.always_learnable_param = always_learnable_param
         super().__init__(*args, **kwargs)
         control_stage_config.params["use_VAEdownsample"] = use_VAEdownsample
@@ -132,20 +136,26 @@ class ControlLDM(LatentDiffusion):
             control, cond_output = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt, only_mid_control=self.only_mid_control)
             if len(control) == len(self.control_scales):
                 control = [c * scale for c, scale in zip(control, self.control_scales)]
+            mask_h = 64
+            mask_w = 48
+            mask1 = None
+            mask2 = None
+            mask3 = None
             if self.use_attn_mask:
-                mask_h = 64
-                mask_w = 48
-                           
-                mask1 = self.batch[self.mask1_key][:x_noisy.shape[0]].permute(0,3,1,2)  
+
+                mask1 = self.batch[self.mask1_key][:x_noisy.shape[0]].permute(0,3,1,2)
                 mask2 = self.batch[self.mask2_key][:x_noisy.shape[0]].permute(0,3,1,2)
-                
+
                 mask1 = self.mask_resize(mask1, mask_h, mask_w, inverse=True)  # [BS x 1 x H x W]
                 mask2 = self.mask_resize(mask2, mask_h, mask_w, inverse=True)  # [BS x 1 x H x W]
-            else:
-                mask1 = None
-                mask2 = None
 
-            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control, mask1=mask1, mask2=mask2)
+            if self.scale_attn_by_mask3:
+                mask3 = self.batch[self.mask3_key][:x_noisy.shape[0]].permute(0,3,1,2)
+                mask3 = F.interpolate(mask3, (mask_h, mask_w), mode="nearest")
+
+            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control,
+                                  only_mid_control=self.only_mid_control,
+                                  mask1=mask1, mask2=mask2, mask3=mask3)
         return eps, None
     
     @torch.no_grad()

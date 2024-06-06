@@ -17,6 +17,8 @@ import torch.nn.functional as F
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
 from PIL import Image
+from torch.nn.parameter import Parameter
+
 from eval_models import PerceptualLoss
 
 from ldm.modules.diffusionmodules.util import (
@@ -231,6 +233,7 @@ class StableVITON(UNetModel):
         self,
         dim_head_denorm=1,
         use_atv_loss=False,
+        scale_attn_by_mask3=False,
         *args,
         **kwargs,
     ):
@@ -280,6 +283,11 @@ class StableVITON(UNetModel):
         self.warp_flow_blks = nn.ModuleList(reversed(warp_flow_blks))
         self.warp_zero_convs = nn.ModuleList(reversed(warp_zero_convs))
         self.use_atv_loss = use_atv_loss
+        self.scale_attn_by_mask3 = scale_attn_by_mask3
+        if scale_attn_by_mask3:
+            self.attn_scale_mask3 = Parameter(torch.ones(len(self.warp_flow_blks), dtype=torch.float32))
+        else:
+            self.register_parameter('attn_scale_mask3', None)
     def make_zero_conv(self, channels):
         return zero_module(conv_nd(2, channels, channels, 1, padding=0))
 
@@ -298,6 +306,7 @@ class StableVITON(UNetModel):
         hs = []
         mask1 = kwargs.get("mask1", None)
         mask2 = kwargs.get("mask2", None)
+        mask3 = kwargs.get("mask3", None)
         loss = 0
 
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
@@ -322,7 +331,7 @@ class StableVITON(UNetModel):
                 assert 0, f"shape is wrong : {h.shape}"
             else:
                 hint = control.pop()
-                h, attn_loss = self.warp(h, hint, warp_blk, warp_zc, mask1=mask1, mask2=mask2)
+                h, attn_loss = self.warp(h, hint, warp_blk, warp_zc, i, mask1=mask1, mask2=mask2, mask3=mask3)
                 loss += attn_loss
                 h = torch.cat([h, hs.pop()], dim=1)
             h = module(h, emb, context)
@@ -337,15 +346,21 @@ class StableVITON(UNetModel):
             return self.out(h), loss
         else:
             return self.out(h)
-    def warp(self, x, hint, crossattn_layer, zero_conv, mask1=None, mask2=None):
+    def warp(self, x, hint, crossattn_layer, zero_conv, i, mask1=None, mask2=None, mask3=None):
         hint = rearrange(hint, "b c h w -> b (h w) c").contiguous()
         if self.use_atv_loss:
             output, attn_loss = crossattn_layer(x, hint, mask1=mask1, mask2=mask2, use_attention_tv_loss=True)
             output = zero_conv(output)
+            if self.scale_attn_by_mask3:
+                mask3 = F.interpolate(mask3, size=output.shape[-2:], mode='bilinear')
+                output = output * ((1 - mask3) + self.attn_scale_mask3[i] * mask3)
             return output + x, attn_loss
         else:
             output = crossattn_layer(x, hint)
             output = zero_conv(output)
+            if self.scale_attn_by_mask3:
+                mask3 = F.interpolate(mask3, size=output.shape[-2:], mode='bilinear')
+                output = output * ((1 - mask3) + self.attn_scale_mask3[i] * mask3)
             return output + x, 0
 
 class NoZeroConvControlNet(nn.Module):

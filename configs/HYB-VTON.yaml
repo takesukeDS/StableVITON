@@ -24,8 +24,8 @@ model:
     use_pbe_weight: True
     u_cond_percent: 0.2
     use_attn_mask: False
-    mask1_key: "not used"
-    mask2_key: "not used"
+    mask1_key: "gt_cloth_warped_mask"
+    mask2_key: "agn_mask"
     mask3_key: "hybvton_warped_mask"
 
     control_stage_config:

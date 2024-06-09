@@ -454,7 +454,7 @@ class PLMSSamplerHybvton(PLMSSampler):
                     input_timesteps = ensure_tensor(step)
                     if input_timesteps.dim() == 0:
                         input_timesteps = input_timesteps.unsqueeze(0)
-                    input_timesteps = input_timesteps.expand(b)
+                    input_timesteps = input_timesteps.expand(b).cuda()
                     warped_cloth_orig = batch['warped_cloth_orig']
                     warped_mask_orig = batch['warped_mask_orig']
                     parse_agnostic = batch['parse_agnostic']

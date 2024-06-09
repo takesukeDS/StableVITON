@@ -502,7 +502,8 @@ class PLMSSamplerHybvton(PLMSSampler):
                             warped_cloth = bilateral_filter(warped_cloth, self.bilateral_kernel_size,
                                                             self.bilateral_sigma_d, self.bilateral_sigma_r)
 
-                    warped_clothmask = warped_clothmask.bool() & (batch["agn_mask_orig"] < 0.5)
+                    warped_cloth = warped_cloth.permute(0, 2, 3, 1)
+                    warped_clothmask = warped_clothmask.bool().permute(0, 2, 3, 1) & (batch["agn_mask_orig"] < 0.5)
                     warped_clothmask = warped_clothmask.float()
                     batch["agn_mask"] = batch["agn_mask_orig"] + warped_clothmask
                     batch["agn"] = batch["agn_orig"] * (1 - warped_clothmask) + warped_cloth * warped_clothmask
@@ -511,11 +512,11 @@ class PLMSSamplerHybvton(PLMSSampler):
                     if self.display_cond:
                         for name in ["agn", "agn_mask", "hybvton_warped_mask"]:
                             if "mask" in name:
-                                img = batch[name][0].repeat(3, 1, 1)
+                                img = batch[name][0].repeat(1, 1, 3)
                             else:
                                 img = batch[name][0]
                             img = (img + 1) / 2
-                            img = img.permute(1, 2, 0).cpu().numpy()
+                            img = img.cpu().numpy()
                             img = (img * 255).astype(np.uint8)
                             Image.fromarray(img).save(f"display_cond/{name}_{step}.png")
 

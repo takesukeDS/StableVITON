@@ -437,6 +437,17 @@ class PLMSSamplerHybvton(PLMSSampler):
         iterator = tqdm(time_range, desc='PLMS Sampler', total=total_steps)
         old_eps = []
 
+        if self.display_cond:
+            for name in ["agn", "agn_mask", "hybvton_warped_mask"]:
+                if "mask" in name:
+                    img_tmp = batch[name][0].repeat(1, 1, 3)
+                else:
+                    img_tmp = batch[name][0]
+                img_tmp = (img_tmp + 1) / 2
+                img_tmp = img_tmp.cpu().numpy()
+                img_tmp = (img_tmp * 255).astype(np.uint8)
+                Image.fromarray(img_tmp).save(
+                    f"display_cond/{batch['img_fn'][0]}_{batch['cloth_fn'][0]}_{name}_before.png")
 
         for i, step in enumerate(iterator):
             if not self.resampling_trick:
@@ -518,7 +529,8 @@ class PLMSSamplerHybvton(PLMSSampler):
                             img_tmp = (img_tmp + 1) / 2
                             img_tmp = img_tmp.cpu().numpy()
                             img_tmp = (img_tmp * 255).astype(np.uint8)
-                            Image.fromarray(img_tmp).save(f"display_cond/{name}_{step}.png")
+                            Image.fromarray(img_tmp).save(
+                                f"display_cond/{batch['img_fn'][0]}_{batch['cloth_fn'][0]}_{name}_{step}.png")
 
                     first_stage_cond = []
                     for key in self.model.first_stage_key_cond:

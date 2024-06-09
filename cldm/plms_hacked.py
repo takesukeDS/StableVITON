@@ -512,13 +512,13 @@ class PLMSSamplerHybvton(PLMSSampler):
                     if self.display_cond:
                         for name in ["agn", "agn_mask", "hybvton_warped_mask"]:
                             if "mask" in name:
-                                img = batch[name][0].repeat(1, 1, 3)
+                                img_tmp = batch[name][0].repeat(1, 1, 3)
                             else:
-                                img = batch[name][0]
-                            img = (img + 1) / 2
-                            img = img.cpu().numpy()
-                            img = (img * 255).astype(np.uint8)
-                            Image.fromarray(img).save(f"display_cond/{name}_{step}.png")
+                                img_tmp = batch[name][0]
+                            img_tmp = (img_tmp + 1) / 2
+                            img_tmp = img_tmp.cpu().numpy()
+                            img_tmp = (img_tmp * 255).astype(np.uint8)
+                            Image.fromarray(img_tmp).save(f"display_cond/{name}_{step}.png")
 
                     first_stage_cond = []
                     for key in self.model.first_stage_key_cond:

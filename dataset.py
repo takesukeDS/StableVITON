@@ -4,7 +4,15 @@ from os.path import join as opj
 import cv2
 import numpy as np
 import albumentations as A
+import torch
 from torch.utils.data import Dataset
+from PIL import Image
+import os.path as osp
+
+from torchvision.transforms import InterpolationMode
+import torchvision.transforms.functional as TF
+from torchvision import transforms
+
 
 def imread(
         p, h, w, 
@@ -381,4 +389,244 @@ class VITONHDDataset(Dataset):
             hybvton_warped_cloth=hybvton_warped_cloth,
             hybvton_warped_mask=hybvton_warped_mask,
             agn_mask_orig=agn_mask_orig,
+        )
+
+
+class VITONHDDatasetWithGAN(VITONHDDataset):
+    # parse map
+    labels = {
+        0: ['background', [0, 10]],
+        1: ['hair', [1, 2]],
+        2: ['face', [4, 13]],
+        3: ['upper', [5, 6, 7]],
+        4: ['bottom', [9, 12]],
+        5: ['left_arm', [14]],
+        6: ['right_arm', [15]],
+        7: ['left_leg', [16]],
+        8: ['right_leg', [17]],
+        9: ['left_shoe', [18]],
+        10: ['right_shoe', [19]],
+        11: ['socks', [8]],
+        12: ['noise', [3, 11]]
+    }
+
+    def __init__(self, data_root_dir, img_H, img_W, phase, is_paired=True, is_sorted=False, transform_size=None,
+                 transform_color=None, semantic_nc=None, **kwargs):
+        super().__init__(data_root_dir, img_H, img_W, phase, is_paired, is_sorted, transform_size, transform_color,
+                         **kwargs)
+        self.transform = transforms.Compose([ \
+            transforms.ToTensor(), \
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        self.semantic_nc = semantic_nc
+
+    def build_parse_agnostic(self, idx):
+        # load parsing image
+        parse_name = opj(self.drd, self.data_type, 'image-parse-v3', self.im_names[idx]).replace('.jpg', '.png')
+        im_parse_pil_big = Image.open(parse_name)
+        im_parse_pil = TF.resize(im_parse_pil_big,
+                                 (int(self.img_H*self.resize_ratio_H), int(self.img_W*self.resize_ratio_W)),
+                                 interpolation=InterpolationMode.NEAREST)
+        parse = torch.from_numpy(np.array(im_parse_pil)[None]).long()
+        im_parse = self.transform(im_parse_pil.convert('RGB'))
+
+
+        parse_map = torch.FloatTensor(20, self.img_H, self.img_W).zero_()
+        parse_map = parse_map.scatter_(0, parse, 1.0)
+        new_parse_map = torch.FloatTensor(self.semantic_nc, self.img_H, self.img_W).zero_()
+
+        for i in range(len(self.labels)):
+            for label in self.labels[i][1]:
+                new_parse_map[i] += parse_map[label]
+
+        parse_onehot = torch.FloatTensor(1, self.img_H, self.img_W).zero_()
+        for i in range(len(self.labels)):
+            for label in self.labels[i][1]:
+                parse_onehot[0] += parse_map[label] * i
+
+        # load image-parse-agnostic
+        image_parse_agnostic = Image.open(
+            osp.join(parse_name.replace('image-parse-v3', 'image-parse-agnostic-v3.2')))
+        image_parse_agnostic = transforms.Resize(self.img_W, interpolation=0)(image_parse_agnostic)
+        parse_agnostic = torch.from_numpy(np.array(image_parse_agnostic)[None]).long()
+
+        parse_agnostic_map = torch.FloatTensor(20, self.img_H, self.img_W).zero_()
+        parse_agnostic_map = parse_agnostic_map.scatter_(0, parse_agnostic, 1.0)
+        new_parse_agnostic_map = torch.FloatTensor(self.semantic_nc, self.img_H, self.img_W).zero_()
+        for i in range(len(self.labels)):
+            for label in self.labels[i][1]:
+                new_parse_agnostic_map[i] += parse_agnostic_map[label]
+        return new_parse_agnostic_map
+
+    def __getitem__(self, idx):
+        img_fn = self.im_names[idx]
+        cloth_fn = self.c_names[self.pair_key][idx]
+        agn = imread_for_albu(opj(self.drd, self.data_type, "agnostic-v3.2", self.im_names[idx]))
+        agn_mask = imread_for_albu(
+            opj(self.drd, self.data_type, "agnostic-mask", self.im_names[idx].replace(".jpg", "_mask.png")),
+            is_mask=True)
+        cloth = imread_for_albu(opj(self.drd, self.data_type, "cloth", self.c_names[self.pair_key][idx]))
+        cloth_mask = imread_for_albu(opj(self.drd, self.data_type, "cloth-mask", self.c_names[self.pair_key][idx]),
+                                     is_mask=True, cloth_mask_check=True)
+
+        gt_cloth_warped_mask = imread_for_albu(
+            opj(self.drd, self.data_type, "gt_cloth_warped_mask", self.im_names[idx]),
+            is_mask=True
+        ) if not self.is_test else np.zeros_like(agn_mask)
+        hybvton_warped_cloth = imread_for_albu(
+            opj(self.drd, self.data_type, "hybvton_warped_cloth_" + self.pair_key,
+                self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
+        )
+        hybvton_warped_mask = imread_for_albu(
+            opj(self.drd, self.data_type, "hybvton_warped_mask_" + self.pair_key,
+                self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][idx].replace(".jpg", ".png")),
+            is_mask=True
+        )
+
+        image = imread_for_albu(opj(self.drd, self.data_type, "image", self.im_names[idx]))
+        image_densepose = imread_for_albu(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]))
+
+        if self.transform_size is not None:
+            transformed = self.transform_size(
+                image=image,
+                agn=agn,
+                agn_mask=agn_mask,
+                cloth=cloth,
+                cloth_mask=cloth_mask,
+                image_densepose=image_densepose,
+                gt_cloth_warped_mask=gt_cloth_warped_mask,
+            )
+            image = transformed["image"]
+            agn = transformed["agn"]
+            agn_mask = transformed["agn_mask"]
+            image_densepose = transformed["image_densepose"]
+            gt_cloth_warped_mask = transformed["gt_cloth_warped_mask"]
+
+            cloth = transformed["cloth"]
+            cloth_mask = transformed["cloth_mask"]
+
+        hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
+        agn_mask_orig = 255 - agn_mask
+        agn_orig = agn
+        agn = agn * (1 - hybvton_warped_mask[:, :, None]) + hybvton_warped_cloth * hybvton_warped_mask[:, :, None]
+        agn = agn.astype(np.uint8)
+        agn_orig = agn_orig.astype(np.uint8)
+        hybvton_warped_mask = (hybvton_warped_mask * 255).astype(np.uint8)
+        agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
+
+        if self.transform_hflip is not None:
+            transformed = self.transform_hflip(
+                image=image,
+                agn=agn,
+                agn_mask=agn_mask,
+                cloth=cloth,
+                cloth_mask=cloth_mask,
+                image_densepose=image_densepose,
+                gt_cloth_warped_mask=gt_cloth_warped_mask,
+                hybvton_warped_cloth=hybvton_warped_cloth,
+                hybvton_warped_mask=hybvton_warped_mask,
+            )
+
+            image = transformed["image"]
+            agn = transformed["agn"]
+            agn_mask = transformed["agn_mask"]
+            image_densepose = transformed["image_densepose"]
+            gt_cloth_warped_mask = transformed["gt_cloth_warped_mask"]
+            hybvton_warped_cloth = transformed["hybvton_warped_cloth"]
+            hybvton_warped_mask = transformed["hybvton_warped_mask"]
+
+            cloth = transformed["cloth"]
+            cloth_mask = transformed["cloth_mask"]
+
+        if self.transform_crop_person is not None:
+            transformed_image = self.transform_crop_person(
+                image=image,
+                agn=agn,
+                agn_mask=agn_mask,
+                image_densepose=image_densepose,
+                gt_cloth_warped_mask=gt_cloth_warped_mask,
+                hybvton_warped_cloth=hybvton_warped_cloth,
+                hybvton_warped_mask=hybvton_warped_mask,
+            )
+
+            image = transformed_image["image"]
+            agn = transformed_image["agn"]
+            agn_mask = transformed_image["agn_mask"]
+            image_densepose = transformed_image["image_densepose"]
+            gt_cloth_warped_mask = transformed_image["gt_cloth_warped_mask"]
+            hybvton_warped_cloth = transformed_image["hybvton_warped_cloth"]
+            hybvton_warped_mask = transformed_image["hybvton_warped_mask"]
+
+        if self.transform_crop_cloth is not None:
+            transformed_cloth = self.transform_crop_cloth(
+                image=cloth,
+                cloth_mask=cloth_mask
+            )
+
+            cloth = transformed_cloth["image"]
+            cloth_mask = transformed_cloth["cloth_mask"]
+
+        agn_mask = 255 - agn_mask
+        if self.transform_color is not None:
+            transformed = self.transform_color(
+                image=image,
+                agn=agn,
+                cloth=cloth,
+            )
+
+            image = transformed["image"]
+            agn = transformed["agn"]
+            cloth = transformed["cloth"]
+
+            agn = agn * agn_mask[:, :, None].astype(np.float32) / 255.0 + 128 * (
+                        1 - agn_mask[:, :, None].astype(np.float32) / 255.0)
+
+        agn = norm_for_albu(agn)
+        agn_mask_orig = norm_for_albu(agn_mask_orig, is_mask=True)
+        agn_mask = norm_for_albu(agn_mask, is_mask=True)
+        cloth = norm_for_albu(cloth)
+        cloth_mask = norm_for_albu(cloth_mask, is_mask=True)
+        image = norm_for_albu(image)
+        image_densepose = norm_for_albu(image_densepose)
+        gt_cloth_warped_mask = norm_for_albu(gt_cloth_warped_mask, is_mask=True)
+        hybvton_warped_cloth = norm_for_albu(hybvton_warped_cloth)
+        hybvton_warped_mask = norm_for_albu(hybvton_warped_mask, is_mask=True)
+
+        # original warped cloth and mask
+        warped_cloth_pil = Image.open(osp.join(self.drd, self.data_type, 'hybvton_warped_cloth_paired_orig',
+                                               self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][
+                                                   idx].replace(".jpg", ".png")))
+        warped_cloth_pil = TF.resize(warped_cloth_pil,
+                                     (int(self.img_H*self.resize_ratio_H), int(self.img_W*self.resize_ratio_W)),
+                                     interpolation=InterpolationMode.BICUBIC)
+        warped_cloth_np = np.array(warped_cloth_pil)
+
+        warped_mask_pil = Image.open(osp.join(self.drd, self.data_type, 'hybvton_warped_mask_paired_orig',
+                                              self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][
+                                                  idx].replace(".jpg", ".png")))
+        warped_mask_pil = TF.resize(warped_mask_pil,
+                                    (int(self.img_H*self.resize_ratio_H), int(self.img_W*self.resize_ratio_W)),
+                                    interpolation=InterpolationMode.NEAREST)
+        warped_mask_np = np.array(warped_mask_pil)
+        warped_mask_orig = torch.from_numpy(warped_mask_np >= 0.5).float()[None]
+        warped_cloth_orig = self.transform(warped_cloth_np)
+
+        parse_agnostic = self.build_parse_agnostic(idx)
+
+        return dict(
+            agn=agn,
+            agn_mask=agn_mask,
+            cloth=cloth,
+            cloth_mask=cloth_mask,
+            image=image,
+            image_densepose=image_densepose,
+            gt_cloth_warped_mask=gt_cloth_warped_mask,
+            txt="",
+            img_fn=img_fn,
+            cloth_fn=cloth_fn,
+            hybvton_warped_cloth=hybvton_warped_cloth,
+            hybvton_warped_mask=hybvton_warped_mask,
+            agn_mask_orig=agn_mask_orig,
+            warped_mask_orig=warped_mask_orig,
+            warped_cloth_orig=warped_cloth_orig,
+            parse_agnostic=parse_agnostic
         )

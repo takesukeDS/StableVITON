@@ -514,7 +514,6 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
         agn_mask = np.clip(agn_mask - hybvton_warped_mask, 0, 255)
 
         if self.transform_hflip is not None:
-            raise NotImplementedError("Do not support augmentations for now.")
             transformed = self.transform_hflip(
                 image=image,
                 agn=agn,
@@ -539,7 +538,6 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
             cloth_mask = transformed["cloth_mask"]
 
         if self.transform_crop_person is not None:
-            raise NotImplementedError("Do not support augmentations for now.")
             transformed_image = self.transform_crop_person(
                 image=image,
                 agn=agn,
@@ -559,7 +557,6 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
             hybvton_warped_mask = transformed_image["hybvton_warped_mask"]
 
         if self.transform_crop_cloth is not None:
-            raise NotImplementedError("Do not support augmentations for now.")
             transformed_cloth = self.transform_crop_cloth(
                 image=cloth,
                 cloth_mask=cloth_mask
@@ -570,7 +567,6 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
 
         agn_mask = 255 - agn_mask
         if self.transform_color is not None:
-            raise NotImplementedError("Do not support augmentations for now.")
             transformed = self.transform_color(
                 image=image,
                 agn=agn,

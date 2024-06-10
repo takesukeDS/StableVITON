@@ -602,7 +602,7 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
         hybvton_warped_mask = norm_for_albu(hybvton_warped_mask, is_mask=True)
 
         # original warped cloth and mask
-        warped_cloth_pil = Image.open(osp.join(self.drd, self.data_type, 'hybvton_warped_cloth_paired_orig',
+        warped_cloth_pil = Image.open(osp.join(self.drd, self.data_type, f'hybvton_warped_cloth_{self.pair_key}_orig',
                                                self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][
                                                    idx].replace(".jpg", ".png")))
         warped_cloth_pil = TF.resize(warped_cloth_pil,
@@ -610,7 +610,7 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
                                      interpolation=InterpolationMode.BICUBIC)
         warped_cloth_np = np.array(warped_cloth_pil)
 
-        warped_mask_pil = Image.open(osp.join(self.drd, self.data_type, 'hybvton_warped_mask_paired_orig',
+        warped_mask_pil = Image.open(osp.join(self.drd, self.data_type, f'hybvton_warped_mask_{self.pair_key}_orig',
                                               self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][
                                                   idx].replace(".jpg", ".png")))
         warped_mask_pil = TF.resize(warped_mask_pil,

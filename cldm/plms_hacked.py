@@ -345,6 +345,7 @@ class PLMSSamplerHybvton(PLMSSampler):
         self.display_cond = kwargs.get("display_cond", False)
         if self.display_cond:
             os.makedirs("display_cond", exist_ok=True)
+        self.extract_torso = kwargs.get("extract_torso", False)
 
     @torch.no_grad()
     def sample(self,
@@ -438,8 +439,10 @@ class PLMSSamplerHybvton(PLMSSampler):
         old_eps = []
 
         if self.display_cond:
-            for name in ["agn", "agn_mask", "hybvton_warped_mask"]:
-                if "mask" in name:
+            for name in ["agn", "agn_mask", "hybvton_warped_mask", "densepose_torso_mask"]:
+                if name == "densepose_torso_mask":
+                    img_tmp = batch[name][0].permute(1, 2, 0).repeat(1, 1, 3)
+                elif "mask" in name:
                     img_tmp = batch[name][0].repeat(1, 1, 3)
                 else:
                     img_tmp = batch[name][0]
@@ -498,6 +501,8 @@ class PLMSSamplerHybvton(PLMSSampler):
                     fake_segmap = F.interpolate(fake_segmap, size=(iH, iW), mode='bilinear')
                     warped_clothmask = remove_overlap(F.softmax(fake_segmap, dim=1), warped_clothmask,
                                                       inference=True)
+                    if self.extract_torso:
+                        warped_clothmask = warped_clothmask * batch["densepose_torso_mask"]
                     warped_cloth = warped_cloth * warped_clothmask + torch.zeros_like(warped_cloth) * (
                                 1 - warped_clothmask)
 

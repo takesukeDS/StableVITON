@@ -139,6 +139,7 @@ class VITONHDDataset(Dataset):
                                     "image_densepose":"image", 
                                     "image_parse":"image", 
                                     "gt_cloth_warped_mask":"image",
+                                    "densepose_torso_mask":"mask",
                                     }
             )
         self.transform_hflip = A.Compose(
@@ -392,6 +393,8 @@ class VITONHDDataset(Dataset):
         )
 
 
+DENSEPOSE_SEGM_RGB_TORSO = [ 20,  80, 194]
+
 class VITONHDDatasetWithGAN(VITONHDDataset):
     # parse map
     labels = {
@@ -484,6 +487,8 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
 
         image = imread_for_albu(opj(self.drd, self.data_type, "image", self.im_names[idx]))
         image_densepose = imread_for_albu(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]))
+        densepose_torso_mask = image_densepose[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
+        densepose_torso_mask = densepose_torso_mask.astype(np.uint8)[:,:,None]
 
         if self.transform_size is not None:
             transformed = self.transform_size(
@@ -494,16 +499,20 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
                 cloth_mask=cloth_mask,
                 image_densepose=image_densepose,
                 gt_cloth_warped_mask=gt_cloth_warped_mask,
+                densepose_torso_mask=densepose_torso_mask,
             )
             image = transformed["image"]
             agn = transformed["agn"]
             agn_mask = transformed["agn_mask"]
             image_densepose = transformed["image_densepose"]
             gt_cloth_warped_mask = transformed["gt_cloth_warped_mask"]
+            densepose_torso_mask = transformed["densepose_torso_mask"]
 
             cloth = transformed["cloth"]
             cloth_mask = transformed["cloth_mask"]
 
+        # Hybvton: images and masks we add for refinement will have format c h w
+        densepose_torso_mask = densepose_torso_mask.astype(np.float32).transpose(2, 0, 1)
         hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
         agn_mask_orig = 255 - agn_mask
         agn_orig = agn
@@ -630,5 +639,6 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
             agn_mask_orig=agn_mask_orig,
             warped_mask_orig=warped_mask_orig,
             warped_cloth_orig=warped_cloth_orig,
-            parse_agnostic=parse_agnostic
+            parse_agnostic=parse_agnostic,
+            densepose_torso_mask=densepose_torso_mask,
         )

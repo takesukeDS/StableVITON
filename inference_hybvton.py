@@ -50,6 +50,7 @@ def build_args():
     parser.add_argument('--tocg_checkpoint', type=str, help='tocg checkpoint')
     parser.add_argument("--display_cond", action="store_true")
     parser.add_argument("--extract_torso", action="store_true")
+    parser.add_argument("--save_dir_cond", type=str, default="display_cond")
 
     # GAN network
     parser.add_argument("--warp_feature", choices=['encoder', 'T1'], default="T1")
@@ -106,7 +107,8 @@ def main(args):
                                   bilateral_filter_iterations=args.bilateral_filter_iterations,
                                   num_erode_iterations=args.num_erode_iterations,
                                  erode_kernel_size=args.erode_kernel_size, timestep_threshold=args.timestep_threshold,
-                                 tocg=tocg, display_cond=args.display_cond, extract_torso=args.extract_torso)
+                                 tocg=tocg, display_cond=args.display_cond, extract_torso=args.extract_torso,
+                                 save_dir_cond=args.save_dir_cond)
     dataset = getattr(import_module("dataset"), config.dataset_name)(
         data_root_dir=args.data_root_dir,
         img_H=img_H,

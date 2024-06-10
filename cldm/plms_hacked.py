@@ -343,8 +343,9 @@ class PLMSSamplerHybvton(PLMSSampler):
             print(f"Warning: ToCG is not provided. Sampling without refinement.")
         self.timestep_threshold = kwargs.get("timestep_threshold", 1000)
         self.display_cond = kwargs.get("display_cond", False)
+        self.save_dir_cond = kwargs.get("save_dir_cond", "display_cond")
         if self.display_cond:
-            os.makedirs("display_cond", exist_ok=True)
+            os.makedirs(self.save_dir_cond, exist_ok=True)
         self.extract_torso = kwargs.get("extract_torso", False)
 
     @torch.no_grad()
@@ -450,7 +451,7 @@ class PLMSSamplerHybvton(PLMSSampler):
                 img_tmp = img_tmp.cpu().numpy()
                 img_tmp = (img_tmp * 255).astype(np.uint8)
                 Image.fromarray(img_tmp).save(
-                    f"display_cond/{batch['img_fn'][0]}_{batch['cloth_fn'][0]}_{name}_before.png")
+                    f"{self.save_dir_cond}/{batch['img_fn'][0]}_{batch['cloth_fn'][0]}_{name}_before.png")
 
         for i, step in enumerate(iterator):
             if not self.resampling_trick:
@@ -535,7 +536,7 @@ class PLMSSamplerHybvton(PLMSSampler):
                             img_tmp = img_tmp.cpu().numpy()
                             img_tmp = (img_tmp * 255).astype(np.uint8)
                             Image.fromarray(img_tmp).save(
-                                f"display_cond/{batch['img_fn'][0]}_{batch['cloth_fn'][0]}_{name}_{step}.png")
+                                f"{self.save_dir_cond}/{batch['img_fn'][0]}_{batch['cloth_fn'][0]}_{name}_{step}.png")
 
                     first_stage_cond = []
                     for key in self.model.first_stage_key_cond:

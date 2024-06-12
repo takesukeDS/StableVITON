@@ -316,6 +316,12 @@ class ControlLDM(LatentDiffusion):
                 if self.unet_config.params.in_channels != 4:
                     params += list(self.model.diffusion_model.input_blocks[0].parameters())
                     print("Unet input block is added")
+            if hasattr(self.model.diffusion_model, "warp_flow_blks"):
+                params += list(self.model.diffusion_model.warp_flow_blks.parameters())
+                print(f"warp flow blks is added")
+            if hasattr(self.model.diffusion_model, "warp_zero_convs"):
+                params += list(self.model.diffusion_model.warp_zero_convs.parameters())
+                print(f"warp zero convs is added")
         if self.cond_stage_trainable:
             if hasattr(self.cond_stage_model, "final_ln"):
                 params += list(self.cond_stage_model.final_ln.parameters())
@@ -329,12 +335,6 @@ class ControlLDM(LatentDiffusion):
         if self.learnable_vector is not None:
             params.append(self.learnable_vector)
             print("learnable vector is added")
-        if hasattr(self.model.diffusion_model, "warp_flow_blks"):
-            params += list(self.model.diffusion_model.warp_flow_blks.parameters())
-            print(f"warp flow blks is added")
-        if hasattr(self.model.diffusion_model, "warp_zero_convs"):
-            params += list(self.model.diffusion_model.warp_zero_convs.parameters())
-            print(f"warp zero convs is added")
         opt = torch.optim.AdamW(params, lr=lr)
         print("============================")
         return opt

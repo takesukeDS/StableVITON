@@ -285,7 +285,7 @@ class StableVITON(UNetModel):
         self.use_atv_loss = use_atv_loss
         self.scale_attn_by_mask3 = scale_attn_by_mask3
         if scale_attn_by_mask3:
-            self.attn_scale_mask3 = Parameter(torch.ones(len(self.warp_flow_blks), dtype=torch.float32))
+            self.attn_scale_mask3 = Parameter(0.5 * torch.ones(len(self.warp_flow_blks), dtype=torch.float32))
         else:
             self.register_parameter('attn_scale_mask3', None)
     def make_zero_conv(self, channels):

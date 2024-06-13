@@ -72,6 +72,7 @@ class ControlLDM(LatentDiffusion):
         self.all_unlocked = all_unlocked
         self.gmm = None
         self.clothflow = None
+        self.hybvton = kwargs.get("hybvton", False)
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
         x, c = super().get_input(batch, self.first_stage_key, *args, **kwargs)
@@ -282,6 +283,18 @@ class ControlLDM(LatentDiffusion):
     def configure_optimizers(self):
         lr = self.learning_rate
         print("=====configure optimizer=====")
+        if self.hybvton:
+            print("hybvton mode")
+            params = list(self.model.diffusion_model.output_blocks.parameters())
+            print("Unet output blocks is added")
+            params += list(self.model.diffusion_model.out.parameters())
+            print("Unet out is added")
+            params += list(self.control_model.input_blocks[0][0].parameters())
+            print("- control model input block is added")
+            opt = torch.optim.AdamW(params, lr=lr)
+            print("============================")
+            return opt
+
         if self.pbe_train_mode:
             print("pbe train mode")
             params = list(self.model.parameters())

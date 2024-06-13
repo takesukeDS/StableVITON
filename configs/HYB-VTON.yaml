@@ -27,7 +27,7 @@ model:
     mask1_key: "gt_cloth_warped_mask"
     mask2_key: "agn_mask"
     mask3_key: "hybvton_warped_mask"
-    all_unlocked: True
+    hybvton: True
 
     control_stage_config:
       target: cldm.warping_cldm_network.NoZeroConvControlNet

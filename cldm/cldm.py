@@ -289,6 +289,11 @@ class ControlLDM(LatentDiffusion):
             print("Unet output blocks is added")
             params += list(self.model.diffusion_model.out.parameters())
             print("Unet out is added")
+            params += list(self.model.diffusion_model.input_blocks[0][0].parameters())
+            print("Unet input block is added")
+            if self.model.diffusion_model.scale_attn_by_mask3:
+                params += [self.model.diffusion_model.attn_scale_mask3]
+                print("attn_scale_mask3 is added")
             params += list(self.control_model.input_blocks[0][0].parameters())
             print("- control model input block is added")
             opt = torch.optim.AdamW(params, lr=lr)

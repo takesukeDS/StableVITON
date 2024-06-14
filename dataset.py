@@ -414,13 +414,14 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
     }
 
     def __init__(self, data_root_dir, img_H, img_W, phase, is_paired=True, is_sorted=False, transform_size=None,
-                 transform_color=None, semantic_nc=None, **kwargs):
+                 transform_color=None, semantic_nc=None, use_preprocessed=False, **kwargs):
         super().__init__(data_root_dir, img_H, img_W, phase, is_paired, is_sorted, transform_size, transform_color,
                          **kwargs)
         self.transform = transforms.Compose([ \
             transforms.ToTensor(), \
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         self.semantic_nc = semantic_nc
+        self.use_preprocessed = use_preprocessed
 
     def build_parse_agnostic(self, idx):
         # load parsing image
@@ -622,6 +623,18 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
 
         parse_agnostic = self.build_parse_agnostic(idx)
 
+        warped_cloth_processed = 0
+        if self.use_preprocessed:
+            warped_cloth_processed_pil = Image.open(
+                osp.join(self.drd, self.data_type, f'hybvton_warped_cloth_{self.pair_key}_processed',
+                         self.im_names[idx].split(".")[0] + "_" + self.c_names[self.pair_key][
+                             idx].replace(".jpg", ".png")))
+            warped_cloth_processed_pil = TF.resize(warped_cloth_processed_pil,
+                                         (int(self.img_H * self.resize_ratio_H), int(self.img_W * self.resize_ratio_W)),
+                                         interpolation=InterpolationMode.BICUBIC)
+            warped_cloth_processed = self.transform(warped_cloth_processed_pil)
+
+
         return dict(
             agn=agn,
             agn_orig=agn_orig,
@@ -641,4 +654,5 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
             warped_cloth_orig=warped_cloth_orig,
             parse_agnostic=parse_agnostic,
             densepose_torso_mask=densepose_torso_mask,
+            warped_cloth_processed=warped_cloth_processed,
         )

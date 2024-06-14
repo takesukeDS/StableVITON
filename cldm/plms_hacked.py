@@ -347,6 +347,7 @@ class PLMSSamplerHybvton(PLMSSampler):
         if self.display_cond:
             os.makedirs(self.save_dir_cond, exist_ok=True)
         self.extract_torso = kwargs.get("extract_torso", False)
+        self.use_preprocessed = kwargs.get("use_preprocessed", False)
 
     @torch.no_grad()
     def sample(self,
@@ -438,6 +439,8 @@ class PLMSSamplerHybvton(PLMSSampler):
 
         iterator = tqdm(time_range, desc='PLMS Sampler', total=total_steps)
         old_eps = []
+        if self.use_preprocessed and self.bilateral_filter_iterations > 0:
+            print(f"Warning: Using preprocessed images with additional bilateral filtering")
 
         if self.display_cond:
             for name in ["agn", "agn_mask", "hybvton_warped_mask", "densepose_torso_mask"]:
@@ -474,6 +477,7 @@ class PLMSSamplerHybvton(PLMSSampler):
                     warped_mask_orig = batch['warped_mask_orig']
                     parse_agnostic = batch['parse_agnostic']
                     densepose = batch['image_densepose'].permute(0, 3, 1, 2)
+                    to_be_warped = batch['warped_cloth_processed'] if self.use_preprocessed else batch['warped_cloth_orig']
 
                     # down
                     pre_clothes_mask_down = F.interpolate(warped_mask_orig, size=(256, 192), mode='nearest')
@@ -497,7 +501,7 @@ class PLMSSamplerHybvton(PLMSSampler):
 
                     grid = make_grid(N, iH, iW, flow.device)
                     warped_grid = grid + flow_norm
-                    warped_cloth = F.grid_sample(warped_cloth_orig, warped_grid, padding_mode='border')
+                    warped_cloth = F.grid_sample(to_be_warped, warped_grid, padding_mode='border')
                     warped_clothmask = F.grid_sample(warped_mask_orig, warped_grid, padding_mode='border')
                     fake_segmap = F.interpolate(fake_segmap, size=(iH, iW), mode='bilinear')
                     warped_clothmask = remove_overlap(F.softmax(fake_segmap, dim=1), warped_clothmask,

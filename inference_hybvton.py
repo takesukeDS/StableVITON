@@ -51,6 +51,7 @@ def build_args():
     parser.add_argument("--display_cond", action="store_true")
     parser.add_argument("--extract_torso", action="store_true")
     parser.add_argument("--save_dir_cond", type=str, default="display_cond")
+    parser.add_argument("--use_preprocessed", action="store_true")
 
     # GAN network
     parser.add_argument("--warp_feature", choices=['encoder', 'T1'], default="T1")
@@ -117,6 +118,7 @@ def main(args):
         is_paired=not args.unpair,
         is_sorted=True,
         semantic_nc=opt.semantic_nc,
+        use_preprocessed=args.use_preprocessed,
     )
     dataloader = DataLoader(dataset, num_workers=4, shuffle=False, batch_size=batch_size, pin_memory=True)
 

@@ -109,7 +109,7 @@ def main(args):
                                   num_erode_iterations=args.num_erode_iterations,
                                  erode_kernel_size=args.erode_kernel_size, timestep_threshold=args.timestep_threshold,
                                  tocg=tocg, display_cond=args.display_cond, extract_torso=args.extract_torso,
-                                 save_dir_cond=args.save_dir_cond)
+                                 save_dir_cond=args.save_dir_cond, use_preprocessed=args.use_preprocessed)
     dataset = getattr(import_module("dataset"), config.dataset_name)(
         data_root_dir=args.data_root_dir,
         img_H=img_H,

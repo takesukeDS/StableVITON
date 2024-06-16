@@ -348,6 +348,7 @@ class PLMSSamplerHybvton(PLMSSampler):
             os.makedirs(self.save_dir_cond, exist_ok=True)
         self.extract_torso = kwargs.get("extract_torso", False)
         self.use_preprocessed = kwargs.get("use_preprocessed", False)
+        self.only_one_refinement = kwargs.get("only_one_refinement", False)
 
     @torch.no_grad()
     def sample(self,
@@ -459,6 +460,7 @@ class PLMSSamplerHybvton(PLMSSampler):
                 Image.fromarray(img_tmp).save(
                     f"{self.save_dir_cond}/{batch['img_fn'][0]}_{batch['cloth_fn'][0]}_{name}_before.png")
 
+        do_refinement = True
         for i, step in enumerate(iterator):
             if not self.resampling_trick:
                 index = total_steps - i - 1
@@ -471,7 +473,9 @@ class PLMSSamplerHybvton(PLMSSampler):
                         img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
                         img = img_orig * mask + (1. - mask) * img
 
-                if self.tocg is not None and step < self.timestep_threshold:
+                if self.tocg is not None and do_refinement and step < self.timestep_threshold:
+                    if self.only_one_refinement:
+                        do_refinement = False
                     input_timesteps = ensure_tensor(step)
                     if input_timesteps.dim() == 0:
                         input_timesteps = input_timesteps.unsqueeze(0)

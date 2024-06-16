@@ -445,7 +445,10 @@ class PLMSSamplerHybvton(PLMSSampler):
         if self.display_cond:
             for name in ["agn", "agn_mask", "hybvton_warped_mask", "densepose_torso_mask"]:
                 if name == "densepose_torso_mask":
-                    img_tmp = batch[name][0].permute(1, 2, 0).repeat(1, 1, 3)
+                    img_tmp = batch.get(name)
+                    if img_tmp is None:
+                        continue
+                    img_tmp = img_tmp[0].permute(1, 2, 0).repeat(1, 1, 3)
                 elif "mask" in name:
                     img_tmp = batch[name][0].repeat(1, 1, 3)
                 else:

@@ -93,15 +93,17 @@ def main(args):
     model = model.cuda()
     model.eval()
 
-    input1_nc = 4  # cloth + cloth-mask
-    input2_nc = opt.semantic_nc + 3 + args.latent_nc  # parse_agnostic + densepose + latents(diffusion model)
-    norm_class = partial(GroupNorm, 32)
-    tocg = ConditionGenerator(
-        opt, input1_nc=input1_nc, input2_nc=input2_nc, output_nc=opt.output_nc, ngf=96, norm_layer=norm_class)
-    # Load Checkpoint
-    load_checkpoint(tocg, args.tocg_checkpoint)
-    tocg = tocg.cuda()
-    tocg.eval()
+    tocg = None
+    if args.tocg_checkpoint:
+        input1_nc = 4  # cloth + cloth-mask
+        input2_nc = opt.semantic_nc + 3 + args.latent_nc  # parse_agnostic + densepose + latents(diffusion model)
+        norm_class = partial(GroupNorm, 32)
+        tocg = ConditionGenerator(
+            opt, input1_nc=input1_nc, input2_nc=input2_nc, output_nc=opt.output_nc, ngf=96, norm_layer=norm_class)
+        # Load Checkpoint
+        load_checkpoint(tocg, args.tocg_checkpoint)
+        tocg = tocg.cuda()
+        tocg.eval()
 
     sampler = PLMSSamplerHybvton(model, bilateral_kernel_size=args.bilateral_kernel_size,
                                   bilateral_sigma_d=args.bilateral_sigma_d, bilateral_sigma_r=args.bilateral_sigma_r,

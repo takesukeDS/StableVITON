@@ -47,7 +47,7 @@ def build_args():
     parser.add_argument("--num_erode_iterations", type=int, default=1)
     parser.add_argument("--erode_kernel_size", type=int, default=21)
     parser.add_argument("--timestep_threshold", type=int, default=1000)
-    parser.add_argument('--tocg_checkpoint', type=str, help='tocg checkpoint')
+    parser.add_argument('--tocg_checkpoint', type=str, default=None, help='tocg checkpoint')
     parser.add_argument("--display_cond", action="store_true")
     parser.add_argument("--extract_torso", action="store_true")
     parser.add_argument("--save_dir_cond", type=str, default="display_cond")

@@ -488,7 +488,9 @@ class VITONHDDatasetWithGAN(VITONHDDataset):
 
         image = imread_for_albu(opj(self.drd, self.data_type, "image", self.im_names[idx]))
         image_densepose = imread_for_albu(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]))
-        densepose_torso_mask = image_densepose[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
+        image_densepose_hybvton = imread_for_albu(opj(
+            self.drd, self.data_type, "image-densepose_hybvton", self.im_names[idx].replace(".jpg", ".png")))
+        densepose_torso_mask = image_densepose_hybvton[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
         densepose_torso_mask = densepose_torso_mask.astype(np.uint8)[:,:,None]
 
         if self.transform_size is not None:

@@ -443,6 +443,12 @@ class PLMSSamplerHybvton(PLMSSampler):
         if self.use_preprocessed and self.bilateral_filter_iterations > 0:
             print(f"Warning: Using preprocessed images with additional bilateral filtering")
 
+        # with only_one_refinement, diffusion steps before timestep threshold are without warped cloth
+        if self.only_one_refinement and self.tocg is not None:
+            batch["agn"] = batch["agn_orig"]
+            batch["agn_mask"] = batch["agn_mask_orig"]
+            batch["hybvton_warped_mask"] = torch.zeros_like(batch["hybvton_warped_mask"])
+
         if self.display_cond:
             for name in ["agn", "agn_mask", "hybvton_warped_mask", "densepose_torso_mask"]:
                 if name == "densepose_torso_mask":

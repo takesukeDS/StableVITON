@@ -27,6 +27,10 @@ def build_args():
     parser.add_argument("--img_H", type=int, default=512)
     parser.add_argument("--img_W", type=int, default=384)
     parser.add_argument("--eta", type=float, default=0.0)
+
+    # Added by HYB-VTON
+    parser.add_argument("--start_from_noised_agn", action="store_true")
+
     args = parser.parse_args()
     return args
 
@@ -80,7 +84,9 @@ def main(args):
         sampler.model.batch = batch
 
         ts = torch.full((1,), 999, device=z.device, dtype=torch.long)
-        start_code = model.q_sample(z, ts)     
+        start_code = None
+        if args.start_from_noised_agn:
+            start_code = model.q_sample(c["first_stage_cond"][:, :4], ts)
 
         samples, _, _ = sampler.sample(
             args.denoise_steps,

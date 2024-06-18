@@ -53,6 +53,7 @@ def build_args():
     parser.add_argument("--save_dir_cond", type=str, default="display_cond")
     parser.add_argument("--use_preprocessed", action="store_true")
     parser.add_argument("--only_one_refinement", action="store_true")
+    parser.add_argument("--start_from_noised_agn", action="store_true")
 
     # GAN network
     parser.add_argument("--warp_feature", choices=['encoder', 'T1'], default="T1")
@@ -144,9 +145,11 @@ def main(args):
             if isinstance(v, torch.Tensor):
                 batch[k] = v.cuda()
         sampler.model.batch = batch
-
         ts = torch.full((1,), 999, device=z.device, dtype=torch.long)
-        start_code = model.q_sample(z, ts)     
+
+        start_code = None
+        if args.start_from_noised_agn:
+            start_code = model.q_sample(c["first_stage_cond"][:, :4], ts)
 
         samples, _, _ = sampler.sample(
             batch,

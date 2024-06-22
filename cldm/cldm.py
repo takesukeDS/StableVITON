@@ -150,7 +150,7 @@ class ControlLDM(LatentDiffusion):
                 mask1 = self.mask_resize(mask1, mask_h, mask_w, inverse=True)  # [BS x 1 x H x W]
                 mask2 = self.mask_resize(mask2, mask_h, mask_w, inverse=True)  # [BS x 1 x H x W]
 
-            if self.scale_attn_by_mask3:
+            if diffusion_model.scale_attn_by_mask3:
                 mask3 = self.batch[self.mask3_key][:x_noisy.shape[0]].permute(0,3,1,2)
                 mask3 = F.interpolate(mask3, (mask_h, mask_w), mode="nearest")
 

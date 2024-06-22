@@ -54,6 +54,7 @@ def build_args():
     parser.add_argument("--use_preprocessed", action="store_true")
     parser.add_argument("--only_one_refinement", action="store_true")
     parser.add_argument("--start_from_noised_agn", action="store_true")
+    parser.add_argument("--scale_attn_by_mask3", action="store_true")
 
     # GAN network
     parser.add_argument("--warp_feature", choices=['encoder', 'T1'], default="T1")
@@ -76,6 +77,18 @@ def build_opt(args):
 
     return opt
 
+
+def build_config(args, config_path=None):
+    if config_path is None:
+        config_path = args.config_path
+    config = OmegaConf.load(config_path)
+    if args is not None:
+        config.model.params.unet_config.params.scale_attn_by_mask3 = args.scale_attn_by_mask3
+    config.model.params.img_H = args.img_H
+    config.model.params.img_W = args.img_W
+    return config
+
+
 @torch.no_grad()
 def main(args):
     opt = build_opt(args)
@@ -83,9 +96,7 @@ def main(args):
     img_H = args.img_H
     img_W = args.img_W
 
-    config = OmegaConf.load(args.config_path)
-    config.model.params.img_H = args.img_H
-    config.model.params.img_W = args.img_W
+    config = build_config(args)
     params = config.model.params
 
     model = create_model(config_path=None, config=config)

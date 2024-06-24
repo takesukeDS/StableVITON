@@ -11,7 +11,8 @@ from torch.utils.data import DataLoader
 
 from cldm.plms_hacked import PLMSSampler
 from cldm.model import create_model
-from utils import tensor2img
+from utils import tensor2img, set_seed
+
 
 def build_args():
     parser = argparse.ArgumentParser()
@@ -30,6 +31,7 @@ def build_args():
 
     # Added by HYB-VTON
     parser.add_argument("--start_from_noised_agn", action="store_true")
+    parser.add_argument("--seed", type=int, default=1235)
 
     args = parser.parse_args()
     return args
@@ -113,4 +115,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = build_args()
+    set_seed(args.seed)
     main(args)

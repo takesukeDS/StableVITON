@@ -1,7 +1,9 @@
 import json
 import argparse
+import random
 
 import numpy as np
+import torch
 import torch.nn.functional as F
 
 def save_args(args, to_path):
@@ -37,3 +39,8 @@ def resize_mask(m, shape):
     m[m > 0.5] = 1
     m[m < 0.5] = 0
     return m
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)

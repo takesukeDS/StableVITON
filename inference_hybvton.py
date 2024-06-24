@@ -14,7 +14,8 @@ from torch.utils.data import DataLoader
 from cldm.plms_hacked import PLMSSampler, PLMSSamplerHybvton
 from cldm.model import create_model
 from networks import ConditionGenerator, load_checkpoint
-from utils import tensor2img, set_seed
+from utils import tensor2img, set_seed, bilateral_filter
+import torch.nn.functional as F
 
 
 def build_args():
@@ -51,6 +52,8 @@ def build_args():
     parser.add_argument('--tocg_checkpoint', type=str, default=None, help='tocg checkpoint')
     parser.add_argument("--display_cond", action="store_true")
     parser.add_argument("--extract_torso", action="store_true")
+    parser.add_argument("--torso_extraction_method", choices=['arm_elimination', 'torso_segment', 'none'],
+                        default='none')
     parser.add_argument("--save_dir_cond", type=str, default="display_cond")
     parser.add_argument("--use_preprocessed", action="store_true")
     parser.add_argument("--only_one_refinement", action="store_true")
@@ -120,6 +123,9 @@ def main(args):
         tocg = tocg.cuda()
         tocg.eval()
 
+    if tocg is not None and args.torso_extraction_method != 'none':
+        print("WARNING: torso extraction method is not compatible with tocg (i.e. refinement)")
+
     sampler = PLMSSamplerHybvton(model, bilateral_kernel_size=args.bilateral_kernel_size,
                                   bilateral_sigma_d=args.bilateral_sigma_d, bilateral_sigma_r=args.bilateral_sigma_r,
                                   bilateral_filter_iterations=args.bilateral_filter_iterations,
@@ -137,6 +143,7 @@ def main(args):
         is_sorted=True,
         semantic_nc=opt.semantic_nc,
         use_preprocessed=args.use_preprocessed,
+        torso_extraction_method=args.torso_extraction_method,
     )
     dataloader = DataLoader(dataset, num_workers=4, shuffle=False, batch_size=batch_size, pin_memory=True)
 
@@ -145,6 +152,28 @@ def main(args):
     os.makedirs(save_dir, exist_ok=True)
     for batch_idx, batch in enumerate(dataloader):
         print(f"{batch_idx}/{len(dataloader)}")
+        for k, v in batch.items():
+            if isinstance(v, torch.Tensor):
+                batch[k] = v.cuda()
+        if args.torso_extraction_method != 'none':
+            warped_cloth = batch["hybvton_warped_cloth"].permute(0, 3, 1, 2)
+            warped_clothmask = batch["hybvton_warped_mask"].permute(0, 3, 1, 2)
+            if opt.num_erode_iterations > 0:
+                for _ in range(opt.num_erode_iterations):
+                    warped_clothmask = 1 - F.max_pool2d(1 - warped_clothmask, opt.erode_kernel_size, stride=1,
+                                                        padding=opt.erode_kernel_size // 2)
+                warped_cloth = warped_cloth * warped_clothmask + \
+                               torch.zeros_like(warped_cloth) * (1 - warped_clothmask)
+
+            if opt.bilateral_filter_iterations > 0:
+                for _ in range(opt.bilateral_filter_iterations):
+                    warped_cloth = bilateral_filter(warped_cloth, opt.bilateral_kernel_size,
+                                                    opt.bilateral_sigma_d, opt.bilateral_sigma_r)
+            warped_cloth = warped_cloth.permute(0, 2, 3, 1)
+            warped_clothmask = warped_clothmask.permute(0, 2, 3, 1)
+            batch["agn"] = batch["agn_orig"] * (1 - warped_clothmask) + warped_cloth * warped_clothmask
+            batch["agn_mask"] = (batch["agn_mask_orig"] + warped_clothmask).clip(0, 1)
+
         z, c = model.get_input(batch, params.first_stage_key)
         bs = z.shape[0]
         c_crossattn = c["c_crossattn"][0][:bs]
@@ -154,9 +183,6 @@ def main(args):
         uc_cross = model.get_unconditional_conditioning(bs)
         uc_full = {"c_concat": c["c_concat"], "c_crossattn": [uc_cross]}
         uc_full["first_stage_cond"] = c["first_stage_cond"]
-        for k, v in batch.items():
-            if isinstance(v, torch.Tensor):
-                batch[k] = v.cuda()
         sampler.model.batch = batch
         ts = torch.full((1,), 999, device=z.device, dtype=torch.long)
 

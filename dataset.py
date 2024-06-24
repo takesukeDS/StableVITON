@@ -67,6 +67,39 @@ def norm_for_albu(img, is_mask=False):
         img = img[:,:,None]
     return img
 
+
+DENSEPOSE_SEGM_RGB_TORSO = [ 20,  80, 194]
+DENSEPOSE_SEGM_RGB_RIGHT_ARM = [
+    [170, 189, 105], #right_arm_upper_inside
+    [216, 186,  86], #right_arm_upper_outside
+    [240, 199,  60], #right_arm_lower_inside
+    [251, 220,  36], #right_arm_lower_outside
+]
+DENSEPOSE_SEGM_RGB_LEFT_ARM = [
+    [145, 191, 116], #left_arm_upper_inside
+    [192, 188,  96], #left_arm_upper_outside
+    [228, 192,  74], #left_arm_lower_inside
+    [252, 206,  46], #left_arm_lower_outside
+]
+
+
+DENSEPOSE_SEGM_RGB_RIGHT_ARM_RED = [
+    170, 216, 240, 251
+]
+DENSEPOSE_SEGM_RGB_LEFT_ARM_RED = [
+    145, 192, 228, 252
+]
+DENSEPOSE_SEGM_RGB_TORSO_RED = [
+    20
+]
+
+
+def densepose_to_armmask(segm_np):
+    segm_np_red = segm_np[:, :, 0]
+    mask_arm = np.isin(segm_np_red, DENSEPOSE_SEGM_RGB_RIGHT_ARM_RED + DENSEPOSE_SEGM_RGB_LEFT_ARM_RED)
+    return mask_arm[:, :, None]
+
+
 class VITONHDDataset(Dataset):
     def __init__(
             self, 
@@ -78,6 +111,7 @@ class VITONHDDataset(Dataset):
             is_sorted=False,
             transform_size=None, 
             transform_color=None,
+            torso_extraction_method="none",
             **kwargs
         ):
         self.drd = data_root_dir
@@ -89,6 +123,7 @@ class VITONHDDataset(Dataset):
         self.phase = phase
         self.resize_ratio_H = 1.0
         self.resize_ratio_W = 1.0
+        self.torso_extraction_method = torso_extraction_method
 
         self.resize_transform = A.Resize(img_H, img_W)
         self.transform_size = None
@@ -294,6 +329,17 @@ class VITONHDDataset(Dataset):
 
             hybvton_warped_mask = (hybvton_warped_mask / 255 * agn_mask / 255)
             agn_mask_orig = 255 - agn_mask
+            agn_orig = agn
+
+            if self.torso_extraction_method != "none":
+                if self.torso_extraction_method == "torso_segment":
+                    densepose_torso_mask = image_densepose[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
+                    densepose_torso_mask = densepose_torso_mask.astype(np.float32)[:, :, None]
+                    hybvton_warped_mask = hybvton_warped_mask * densepose_torso_mask
+                elif self.torso_extraction_method == "arm_elimination":
+                    arm_mask = densepose_to_armmask(image_densepose).astype(np.float32)
+                    hybvton_warped_mask = hybvton_warped_mask * (1 - arm_mask)
+
             agn = agn * (1 - hybvton_warped_mask[:, :, None]) + hybvton_warped_cloth * hybvton_warped_mask[:, :, None]
             agn = agn.astype(np.uint8)
             hybvton_warped_mask = (hybvton_warped_mask * 255).astype(np.uint8)
@@ -366,6 +412,7 @@ class VITONHDDataset(Dataset):
                 agn = agn * agn_mask[:,:,None].astype(np.float32)/255.0 + 128 * (1 - agn_mask[:,:,None].astype(np.float32)/255.0)
                 
             agn = norm_for_albu(agn)
+            agn_orig = norm_for_albu(agn_orig)
             agn_mask_orig = norm_for_albu(agn_mask_orig, is_mask=True)
             agn_mask = norm_for_albu(agn_mask, is_mask=True)
             cloth = norm_for_albu(cloth)
@@ -378,7 +425,9 @@ class VITONHDDataset(Dataset):
             
         return dict(
             agn=agn,
+            agn_orig=agn_orig,
             agn_mask=agn_mask,
+            agn_mask_orig=agn_mask_orig,
             cloth=cloth,
             cloth_mask=cloth_mask,
             image=image,
@@ -389,11 +438,8 @@ class VITONHDDataset(Dataset):
             cloth_fn=cloth_fn,
             hybvton_warped_cloth=hybvton_warped_cloth,
             hybvton_warped_mask=hybvton_warped_mask,
-            agn_mask_orig=agn_mask_orig,
         )
 
-
-DENSEPOSE_SEGM_RGB_TORSO = [ 20,  80, 194]
 
 class VITONHDDatasetWithGAN(VITONHDDataset):
     # parse map

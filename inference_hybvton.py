@@ -158,17 +158,17 @@ def main(args):
         if args.torso_extraction_method != 'none':
             warped_cloth = batch["hybvton_warped_cloth"].permute(0, 3, 1, 2)
             warped_clothmask = batch["hybvton_warped_mask"].permute(0, 3, 1, 2)
-            if opt.num_erode_iterations > 0:
-                for _ in range(opt.num_erode_iterations):
-                    warped_clothmask = 1 - F.max_pool2d(1 - warped_clothmask, opt.erode_kernel_size, stride=1,
-                                                        padding=opt.erode_kernel_size // 2)
+            if args.num_erode_iterations > 0:
+                for _ in range(args.num_erode_iterations):
+                    warped_clothmask = 1 - F.max_pool2d(1 - warped_clothmask, args.erode_kernel_size, stride=1,
+                                                        padding=args.erode_kernel_size // 2)
                 warped_cloth = warped_cloth * warped_clothmask + \
                                torch.zeros_like(warped_cloth) * (1 - warped_clothmask)
 
-            if opt.bilateral_filter_iterations > 0:
-                for _ in range(opt.bilateral_filter_iterations):
-                    warped_cloth = bilateral_filter(warped_cloth, opt.bilateral_kernel_size,
-                                                    opt.bilateral_sigma_d, opt.bilateral_sigma_r)
+            if args.bilateral_filter_iterations > 0:
+                for _ in range(args.bilateral_filter_iterations):
+                    warped_cloth = bilateral_filter(warped_cloth, args.bilateral_kernel_size,
+                                                    args.bilateral_sigma_d, args.bilateral_sigma_r)
             warped_cloth = warped_cloth.permute(0, 2, 3, 1)
             warped_clothmask = warped_clothmask.permute(0, 2, 3, 1)
             batch["agn"] = batch["agn_orig"] * (1 - warped_clothmask) + warped_cloth * warped_clothmask

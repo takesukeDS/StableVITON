@@ -97,7 +97,7 @@ DENSEPOSE_SEGM_RGB_TORSO_RED = [
 def densepose_to_armmask(segm_np):
     segm_np_red = segm_np[:, :, 0]
     mask_arm = np.isin(segm_np_red, DENSEPOSE_SEGM_RGB_RIGHT_ARM_RED + DENSEPOSE_SEGM_RGB_LEFT_ARM_RED)
-    return mask_arm[:, :, None]
+    return mask_arm
 
 
 class VITONHDDataset(Dataset):
@@ -334,7 +334,7 @@ class VITONHDDataset(Dataset):
             if self.torso_extraction_method != "none":
                 if self.torso_extraction_method == "torso_segment":
                     densepose_torso_mask = image_densepose[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
-                    densepose_torso_mask = densepose_torso_mask.astype(np.float32)[:, :, None]
+                    densepose_torso_mask = densepose_torso_mask.astype(np.float32)
                     hybvton_warped_mask = hybvton_warped_mask * densepose_torso_mask
                 elif self.torso_extraction_method == "arm_elimination":
                     arm_mask = densepose_to_armmask(image_densepose).astype(np.float32)

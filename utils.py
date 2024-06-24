@@ -1,5 +1,6 @@
 import json
 import argparse
+import random
 
 import numpy as np
 import torch.nn.functional as F
@@ -105,3 +106,9 @@ def ensure_tensor(x):
     if isinstance(x, np.ndarray):
         return torch.from_numpy(x)
     return torch.tensor(x)
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)

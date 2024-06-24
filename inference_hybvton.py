@@ -14,7 +14,8 @@ from torch.utils.data import DataLoader
 from cldm.plms_hacked import PLMSSampler, PLMSSamplerHybvton
 from cldm.model import create_model
 from networks import ConditionGenerator, load_checkpoint
-from utils import tensor2img
+from utils import tensor2img, set_seed
+
 
 def build_args():
     parser = argparse.ArgumentParser()
@@ -55,6 +56,7 @@ def build_args():
     parser.add_argument("--only_one_refinement", action="store_true")
     parser.add_argument("--start_from_noised_agn", action="store_true")
     parser.add_argument("--scale_attn_by_mask3", action="store_true")
+    parser.add_argument("--seed", type=int, default=1235)
 
     # GAN network
     parser.add_argument("--warp_feature", choices=['encoder', 'T1'], default="T1")
@@ -188,4 +190,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = build_args()
+    set_seed(args.seed)
     main(args)

@@ -174,7 +174,7 @@ class VITONHDDataset(Dataset):
                                     "image_densepose":"image", 
                                     "image_parse":"image", 
                                     "gt_cloth_warped_mask":"image",
-                                    "densepose_torso_mask":"mask",
+                                    "image_densepose_hybvton":"image",
                                     }
             )
         self.transform_hflip = A.Compose(
@@ -308,7 +308,7 @@ class VITONHDDataset(Dataset):
             image = imread_for_albu(opj(self.drd, self.data_type, "image", self.im_names[idx]))
             image_densepose = imread_for_albu(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]))
             image_densepose_hybvton = imread_for_albu(
-                opj(self.drd, self.data_type, "image-densepose_hybvton", self.im_names[idx]))
+                opj(self.drd, self.data_type, "image-densepose_hybvton", self.im_names[idx].replace(".jpg", ".png")))
 
             if self.transform_size is not None:
                 transformed = self.transform_size(

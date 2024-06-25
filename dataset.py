@@ -307,6 +307,8 @@ class VITONHDDataset(Dataset):
                 
             image = imread_for_albu(opj(self.drd, self.data_type, "image", self.im_names[idx]))
             image_densepose = imread_for_albu(opj(self.drd, self.data_type, "image-densepose", self.im_names[idx]))
+            image_densepose_hybvton = imread_for_albu(
+                opj(self.drd, self.data_type, "image-densepose_hybvton", self.im_names[idx]))
 
             if self.transform_size is not None:
                 transformed = self.transform_size(
@@ -317,11 +319,13 @@ class VITONHDDataset(Dataset):
                     cloth_mask=cloth_mask, 
                     image_densepose=image_densepose,
                     gt_cloth_warped_mask=gt_cloth_warped_mask,
+                    image_densepose_hybvton=image_densepose_hybvton
                 )
                 image=transformed["image"]
                 agn=transformed["agn"]
                 agn_mask=transformed["agn_mask"]
                 image_densepose=transformed["image_densepose"]
+                image_densepose_hybvton=transformed["image_densepose_hybvton"]
                 gt_cloth_warped_mask=transformed["gt_cloth_warped_mask"]
 
                 cloth=transformed["cloth"]
@@ -333,11 +337,11 @@ class VITONHDDataset(Dataset):
 
             if self.torso_extraction_method != "none":
                 if self.torso_extraction_method == "torso_segment":
-                    densepose_torso_mask = image_densepose[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
+                    densepose_torso_mask = image_densepose_hybvton[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
                     densepose_torso_mask = densepose_torso_mask.astype(np.float32)
                     hybvton_warped_mask = hybvton_warped_mask * densepose_torso_mask
                 elif self.torso_extraction_method == "arm_elimination":
-                    arm_mask = densepose_to_armmask(image_densepose).astype(np.float32)
+                    arm_mask = densepose_to_armmask(image_densepose_hybvton).astype(np.float32)
                     hybvton_warped_mask = hybvton_warped_mask * (1 - arm_mask)
 
             agn = agn * (1 - hybvton_warped_mask[:, :, None]) + hybvton_warped_cloth * hybvton_warped_mask[:, :, None]

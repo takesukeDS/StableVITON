@@ -124,7 +124,7 @@ class VITONHDDataset(Dataset):
         self.resize_ratio_H = 1.0
         self.resize_ratio_W = 1.0
         self.torso_extraction_method = torso_extraction_method
-        self.use_hybvton_densepose_torso = kwargs.get("use_hybvton_densepose_torso", True)
+        self.use_hybvton_densepose_torso = kwargs.get("use_hybvton_densepose_torso", False)
 
         self.resize_transform = A.Resize(img_H, img_W)
         self.transform_size = None

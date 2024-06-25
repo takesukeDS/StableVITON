@@ -124,6 +124,7 @@ class VITONHDDataset(Dataset):
         self.resize_ratio_H = 1.0
         self.resize_ratio_W = 1.0
         self.torso_extraction_method = torso_extraction_method
+        self.use_hybvton_densepose_torso = kwargs.get("use_hybvton_densepose_torso", True)
 
         self.resize_transform = A.Resize(img_H, img_W)
         self.transform_size = None
@@ -336,12 +337,13 @@ class VITONHDDataset(Dataset):
             agn_orig = agn
 
             if self.torso_extraction_method != "none":
+                densepose_for_torso = image_densepose_hybvton if self.use_hybvton_densepose_torso else image_densepose
                 if self.torso_extraction_method == "torso_segment":
-                    densepose_torso_mask = image_densepose_hybvton[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
+                    densepose_torso_mask = densepose_for_torso[:, :, 0] == DENSEPOSE_SEGM_RGB_TORSO[0]
                     densepose_torso_mask = densepose_torso_mask.astype(np.float32)
                     hybvton_warped_mask = hybvton_warped_mask * densepose_torso_mask
                 elif self.torso_extraction_method == "arm_elimination":
-                    arm_mask = densepose_to_armmask(image_densepose_hybvton).astype(np.float32)
+                    arm_mask = densepose_to_armmask(densepose_for_torso).astype(np.float32)
                     hybvton_warped_mask = hybvton_warped_mask * (1 - arm_mask)
 
             agn = agn * (1 - hybvton_warped_mask[:, :, None]) + hybvton_warped_cloth * hybvton_warped_mask[:, :, None]

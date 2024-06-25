@@ -60,6 +60,7 @@ def build_args():
     parser.add_argument("--start_from_noised_agn", action="store_true")
     parser.add_argument("--scale_attn_by_mask3", action="store_true")
     parser.add_argument("--seed", type=int, default=1235)
+    parser.add_argument("--use_hybvton_densepose_torso", action="store_true")
 
     # GAN network
     parser.add_argument("--warp_feature", choices=['encoder', 'T1'], default="T1")

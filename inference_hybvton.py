@@ -48,6 +48,7 @@ def build_args():
     parser.add_argument("--bilateral_filter_iterations", type=int, default=4)
     parser.add_argument("--num_erode_iterations", type=int, default=1)
     parser.add_argument("--erode_kernel_size", type=int, default=21)
+    parser.add_argument("--erode_kernel_size_w", type=int, default=None)
     parser.add_argument("--timestep_threshold", type=int, default=1000)
     parser.add_argument('--tocg_checkpoint', type=str, default=None, help='tocg checkpoint')
     parser.add_argument("--display_cond", action="store_true")
@@ -151,6 +152,8 @@ def main(args):
     shape = (4, img_H//8, img_W//8) 
     save_dir = opj(args.save_dir, "unpair" if args.unpair else "pair")
     os.makedirs(save_dir, exist_ok=True)
+    erode_kernel_size = (args.erode_kernel_size, args.erode_kernel_size_w) if args.erode_kernel_size_w is not None else args.erode_kernel_size
+    erode_padding = erode_kernel_size // 2 if isinstance(erode_kernel_size, int) else (erode_kernel_size[0] // 2, erode_kernel_size[1] // 2)
     for batch_idx, batch in enumerate(dataloader):
         print(f"{batch_idx}/{len(dataloader)}")
         for k, v in batch.items():
@@ -161,8 +164,8 @@ def main(args):
             warped_clothmask = batch["hybvton_warped_mask"].permute(0, 3, 1, 2)
             if args.num_erode_iterations > 0:
                 for _ in range(args.num_erode_iterations):
-                    warped_clothmask = 1 - F.max_pool2d(1 - warped_clothmask, args.erode_kernel_size, stride=1,
-                                                        padding=args.erode_kernel_size // 2)
+                    warped_clothmask = 1 - F.max_pool2d(1 - warped_clothmask, erode_kernel_size, stride=1,
+                                                        padding=erode_padding)
                 warped_cloth = warped_cloth * warped_clothmask + \
                                torch.zeros_like(warped_cloth) * (1 - warped_clothmask)
 

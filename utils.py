@@ -19,7 +19,7 @@ def load_args(from_path, is_test=True):
     if "E_name" not in args.__dict__.keys():
         args.E_name = "basic"
     return args   
-def tensor2img(x):
+def tensor2img(x, round=False):
     '''
     x : [BS x c x H x W] or [c x H x W]
     '''
@@ -31,7 +31,8 @@ def tensor2img(x):
     # x = np.clip(x, 0, 1)
     x = np.clip(x, -1, 1)
     x = (x+1)/2
-    x = np.uint8(x*255.0)
+    adjust = 0.5 if round else 0
+    x = np.uint8(x*255.0 + adjust)
     if x.shape[-1] == 1:  # gray sclae
         x = np.concatenate([x,x,x], axis=-1)
     return x

@@ -205,7 +205,7 @@ def main(args):
 
         x_samples = model.decode_first_stage(samples)
         for sample_idx, (x_sample, fn,  cloth_fn) in enumerate(zip(x_samples, batch['img_fn'], batch["cloth_fn"])):
-            x_sample_img = tensor2img(x_sample)  # [0, 255]
+            x_sample_img = tensor2img(x_sample, round=True)  # [0, 255]
             if args.repaint:
                 repaint_agn_img = np.uint8((batch["image"][sample_idx].cpu().numpy()+1)/2 * 255)   # [0,255]
                 repaint_agn_mask_img = batch["agn_mask_orig"][sample_idx].cpu().numpy()  # 0 or 1
